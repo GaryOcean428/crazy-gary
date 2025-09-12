@@ -1,0 +1,46 @@
+version: '3.8'
+
+services:
+  web:
+    build:
+      context: ./apps/web
+      dockerfile: ../../infra/docker/Dockerfile.web
+    ports:
+      - "3000:80"
+    depends_on:
+      - api
+    environment:
+      - NODE_ENV=production
+
+  api:
+    build:
+      context: ./apps/api
+      dockerfile: ../../infra/docker/Dockerfile.api
+    ports:
+      - "5000:5000"
+    environment:
+      - FLASK_ENV=production
+      - DATABASE_URL=${DATABASE_URL}
+      - HF_BASE_URL_120B=${HF_BASE_URL_120B}
+      - HF_BASE_URL_20B=${HF_BASE_URL_20B}
+      - HUGGINGFACE_API_KEY=${HUGGINGFACE_API_KEY}
+      - JWT_SECRET=${JWT_SECRET}
+    volumes:
+      - ./apps/api/src:/app/src
+    depends_on:
+      - db
+
+  db:
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_DB=crazy_gary
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+volumes:
+  postgres_data:
+
