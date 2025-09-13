@@ -78,7 +78,7 @@ export function Register() {
       } else {
         setError(result.error)
       }
-    } catch (error) {
+    } catch {
       setError('An unexpected error occurred')
     } finally {
       setLoading(false)

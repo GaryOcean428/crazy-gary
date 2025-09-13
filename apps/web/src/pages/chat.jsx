@@ -135,7 +135,7 @@ export function Chat() {
       } else {
         throw new Error('Failed to send message')
       }
-    } catch (error) {
+    } catch {
       const errorMessage = {
         id: (Date.now() + 1).toString(),
         type: 'bot',
@@ -176,7 +176,7 @@ export function Chat() {
         })
         fetchTasks()
       }
-    } catch (error) {
+    } catch {
       toast({
         title: "Error",
         description: "Failed to stop task",

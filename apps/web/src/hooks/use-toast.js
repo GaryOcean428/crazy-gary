@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react'
+import React, { useState } from 'react'
 
 const TOAST_LIMIT = 1
 const TOAST_REMOVE_DELAY = 1000000
