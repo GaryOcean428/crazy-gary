@@ -1,0 +1,31 @@
+{
+  "version": "1",
+  "metadata": {
+    "name": "crazy-gary-api"
+  },
+  "build": {
+    "provider": "python",
+    "steps": {
+      "install": {
+        "commands": [
+          "pip install --upgrade pip",
+          "pip install -r requirements.txt"
+        ]
+      }
+    }
+  },
+  "deploy": {
+    "startCommand": "python src/main.py",
+    "healthCheckPath": "/health",
+    "healthCheckTimeout": 300,
+    "restartPolicyType": "ON_FAILURE",
+    "restartPolicyMaxRetries": 3
+  },
+  "env": {
+    "FLASK_ENV": "production",
+    "FLASK_DEBUG": "False",
+    "HOST": "0.0.0.0",
+    "PYTHONPATH": "/app"
+  }
+}
+
