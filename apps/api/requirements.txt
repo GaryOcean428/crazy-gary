@@ -24,3 +24,6 @@ redis==5.0.1
 
 # PostgreSQL adapter
 psycopg2-binary==2.9.9
+
+# Production WSGI server
+gunicorn==21.2.0

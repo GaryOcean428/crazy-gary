@@ -15,7 +15,7 @@
     }
   },
   "deploy": {
-    "startCommand": "python src/main.py",
+    "startCommand": "gunicorn --bind 0.0.0.0:$PORT --workers 2 --timeout 120 src.main:app",
     "healthCheckPath": "/health",
     "healthCheckTimeout": 300,
     "restartPolicyType": "ON_FAILURE",
