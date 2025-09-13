@@ -83,9 +83,24 @@ class ObservabilityManager:
         self.monitoring_thread = threading.Thread(target=self._background_monitoring, daemon=True)
         self.monitoring_thread.start()
     
+    def _safe_lock_operation(self, operation_func, *args, **kwargs):
+        """Safely execute an operation with lock, preventing deadlocks in multi-worker environment"""
+        try:
+            if self.lock.acquire(timeout=0.1):
+                try:
+                    return operation_func(*args, **kwargs)
+                finally:
+                    self.lock.release()
+            else:
+                logger.debug(f"Skipped operation due to lock timeout")
+                return None
+        except Exception as e:
+            logger.error(f"Error in safe lock operation: {e}")
+            return None
+    
     def record_metric(self, name: str, value: float, metric_type: MetricType = MetricType.GAUGE, labels: Dict[str, str] = None):
         """Record a metric"""
-        with self.lock:
+        def _record():
             metric = Metric(
                 name=name,
                 type=metric_type,
@@ -94,6 +109,8 @@ class ObservabilityManager:
                 labels=labels
             )
             self.metrics[name].append(metric)
+        
+        self._safe_lock_operation(_record)
     
     def increment_counter(self, name: str, value: float = 1.0, labels: Dict[str, str] = None):
         """Increment a counter metric"""
