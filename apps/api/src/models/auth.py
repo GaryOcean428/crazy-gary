@@ -63,17 +63,16 @@ class AuthManager:
             if len(password) < 8:
                 return {'error': 'Password must be at least 8 characters long', 'code': 'WEAK_PASSWORD'}
             
-            # Hash password
-            hashed_password = self.hash_password(password)
-            
-            # Create new user
+            # Create new user with correct field names
             user = User(
                 email=email,
-                password_hash=hashed_password,
-                name=name or email.split('@')[0],
-                is_active=True,
-                created_at=datetime.utcnow()
+                username=email.split('@')[0],  # Use email prefix as username
+                full_name=name or email.split('@')[0],  # Use full_name field
+                is_active=True
             )
+            
+            # Set password using the model's method
+            user.set_password(password)
             
             db.session.add(user)
             db.session.commit()
@@ -86,11 +85,17 @@ class AuthManager:
                 'user': {
                     'id': user.id,
                     'email': user.email,
-                    'name': user.name,
+                    'username': user.username,
+                    'full_name': user.full_name,
                     'created_at': user.created_at.isoformat()
                 },
                 'token': token
             }
+            
+        except Exception as e:
+            db.session.rollback()
+            logger.error(f"Error registering user: {str(e)}")
+            return {'error': 'Registration failed', 'code': 'REGISTRATION_ERROR'}
             
         except Exception as e:
             db.session.rollback()
@@ -109,13 +114,9 @@ class AuthManager:
             if not user.is_active:
                 return {'error': 'Account is disabled', 'code': 'ACCOUNT_DISABLED'}
             
-            # Verify password
-            if not self.verify_password(password, user.password_hash):
+            # Verify password using the model's method
+            if not user.check_password(password):
                 return {'error': 'Invalid credentials', 'code': 'INVALID_CREDENTIALS'}
-            
-            # Update last login
-            user.last_login = datetime.utcnow()
-            db.session.commit()
             
             # Generate token
             token = self.generate_token(user.id, user.email)
@@ -125,8 +126,9 @@ class AuthManager:
                 'user': {
                     'id': user.id,
                     'email': user.email,
-                    'name': user.name,
-                    'last_login': user.last_login.isoformat()
+                    'username': user.username,
+                    'full_name': user.full_name,
+                    'created_at': user.created_at.isoformat()
                 },
                 'token': token
             }

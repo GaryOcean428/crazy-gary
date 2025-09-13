@@ -21,7 +21,7 @@ def register():
         
         email = data.get('email')
         password = data.get('password')
-        name = data.get('name')
+        full_name = data.get('fullName') or data.get('name')  # Support both field names
         
         if not email or not password:
             return jsonify({'error': 'Email and password are required'}), 400
@@ -30,7 +30,7 @@ def register():
         if '@' not in email or '.' not in email:
             return jsonify({'error': 'Invalid email format'}), 400
         
-        result = auth_manager.register_user(email, password, name)
+        result = auth_manager.register_user(email, password, full_name)
         
         if 'error' in result:
             status_code = 409 if result.get('code') == 'USER_EXISTS' else 400
