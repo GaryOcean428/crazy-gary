@@ -14,6 +14,15 @@ import logging
 from src.models.harmony_client import HarmonyClient
 from src.models.mcp_orchestrator import MCPOrchestrator, MCPToolCall
 from src.models.endpoint_manager import HuggingFaceEndpointManager
+from src.models.agent_observability import (
+    start_agent_trace, 
+    end_agent_trace, 
+    log_agent_event, 
+    log_agent_monologue,
+    log_agent_planning,
+    log_tool_execution,
+    AgentEventType
+)
 
 logger = logging.getLogger(__name__)
 
@@ -113,17 +122,47 @@ class AgentLoop:
         self.running_tasks[task_id] = task
         logger.info(f"Created task {task_id}: {title}")
         
+        # Start observability trace
+        trace_id = await start_agent_trace("agent_loop", task_id)
+        task.metadata["trace_id"] = trace_id
+        
+        # Log task creation
+        await log_agent_event(
+            event_type=AgentEventType.TASK_START,
+            message=f"Created task: {title}",
+            agent_id="agent_loop",
+            task_id=task_id,
+            data={
+                "title": title,
+                "description": description,
+                "model": model,
+                "priority": priority
+            }
+        )
+        
         return task_id
 
     async def start_task(self, task_id: str) -> bool:
         """Start executing a task"""
         if task_id not in self.running_tasks:
             logger.error(f"Task {task_id} not found")
+            await log_agent_event(
+                event_type=AgentEventType.ERROR,
+                message=f"Task {task_id} not found",
+                agent_id="agent_loop",
+                task_id=task_id
+            )
             return False
         
         task = self.running_tasks[task_id]
         if task.status != TaskStatus.PENDING:
             logger.error(f"Task {task_id} is not in pending status")
+            await log_agent_event(
+                event_type=AgentEventType.ERROR,
+                message=f"Task {task_id} is not in pending status: {task.status.value}",
+                agent_id="agent_loop",
+                task_id=task_id
+            )
             return False
         
         # Check if we can start another task
@@ -132,7 +171,21 @@ class AgentLoop:
         
         if active_tasks >= self.max_concurrent_tasks:
             logger.warning(f"Cannot start task {task_id}: max concurrent tasks reached")
+            await log_agent_event(
+                event_type=AgentEventType.WARNING,
+                message=f"Cannot start task {task_id}: max concurrent tasks reached ({active_tasks}/{self.max_concurrent_tasks})",
+                agent_id="agent_loop",
+                task_id=task_id
+            )
             return False
+        
+        # Log task start
+        await log_agent_event(
+            event_type=AgentEventType.STEP_START,
+            message=f"Starting execution of task: {task.title}",
+            agent_id="agent_loop",
+            task_id=task_id
+        )
         
         # Start the task execution in background
         asyncio.create_task(self._execute_task(task_id))
@@ -198,17 +251,37 @@ class AgentLoop:
         try:
             logger.info(f"Starting execution of task {task_id}: {task.title}")
             
+            # Log monologue about starting task
+            await log_agent_monologue(
+                agent_id="agent_loop",
+                task_id=task_id,
+                thoughts=f"Starting execution of task: {task.title}. I need to break this down into manageable steps.",
+                reasoning="Beginning autonomous task execution with planning phase"
+            )
+            
             # Phase 1: Planning
             await self._planning_phase(task)
             
             # Phase 2: Execution
             if task.status == TaskStatus.PLANNING:
                 task.status = TaskStatus.EXECUTING
+                await log_agent_event(
+                    event_type=AgentEventType.STEP_START,
+                    message="Starting execution phase",
+                    agent_id="agent_loop",
+                    task_id=task_id
+                )
                 await self._execution_phase(task)
             
             # Phase 3: Verification
             if task.status == TaskStatus.EXECUTING:
                 task.status = TaskStatus.VERIFYING
+                await log_agent_event(
+                    event_type=AgentEventType.STEP_START,
+                    message="Starting verification phase",
+                    agent_id="agent_loop",
+                    task_id=task_id
+                )
                 await self._verification_phase(task)
             
             # Mark as completed if we made it through all phases
@@ -216,12 +289,41 @@ class AgentLoop:
                 task.status = TaskStatus.COMPLETED
                 task.completed_at = time.time()
                 logger.info(f"Task {task_id} completed successfully")
+                
+                # Log task completion
+                await log_agent_event(
+                    event_type=AgentEventType.TASK_COMPLETE,
+                    message=f"Task completed successfully: {task.title}",
+                    agent_id="agent_loop",
+                    task_id=task_id,
+                    duration_ms=(task.completed_at - task.started_at) * 1000
+                )
+                
+                # End observability trace
+                trace_id = task.metadata.get("trace_id")
+                if trace_id:
+                    await end_agent_trace(trace_id, success=True)
             
         except Exception as e:
             logger.error(f"Task {task_id} failed: {str(e)}")
             task.status = TaskStatus.FAILED
             task.error = str(e)
             task.completed_at = time.time()
+            
+            # Log task failure
+            await log_agent_event(
+                event_type=AgentEventType.TASK_FAILED,
+                message=f"Task failed: {str(e)}",
+                agent_id="agent_loop",
+                task_id=task_id,
+                success=False,
+                data={"error": str(e)}
+            )
+            
+            # End observability trace
+            trace_id = task.metadata.get("trace_id")
+            if trace_id:
+                await end_agent_trace(trace_id, success=False)
         
         finally:
             # Move completed task to history
@@ -240,6 +342,23 @@ class AgentLoop:
         task.steps.append(step)
         
         try:
+            # Log planning start
+            await log_agent_event(
+                event_type=AgentEventType.PLANNING,
+                message="Starting task planning phase",
+                agent_id="agent_loop",
+                task_id=task.id,
+                step_id=step.id
+            )
+            
+            # Log agent monologue about planning
+            await log_agent_monologue(
+                agent_id="agent_loop",
+                task_id=task.id,
+                thoughts=f"I need to create a detailed plan for: {task.description}. Let me analyze what tools I have available and break this down into actionable steps.",
+                reasoning="Analyzing task requirements and available tools to create optimal execution plan"
+            )
+            
             # Ensure model is available
             await self._ensure_model_available(task.model)
             
@@ -280,6 +399,14 @@ Respond with a JSON plan in this format:
 }}
 """
             
+            # Log planning activity
+            await log_agent_monologue(
+                agent_id="agent_loop",
+                task_id=task.id,
+                thoughts="Creating execution plan with available tools and resources",
+                reasoning=f"Using {len(available_tools)} available tools to plan optimal execution path"
+            )
+            
             # Generate plan using Harmony
             harmony_response = await self.harmony_client.generate_response(
                 messages=[{
@@ -301,17 +428,53 @@ Respond with a JSON plan in this format:
                 step.output_data = plan_data
                 step.status = "completed"
                 task.metadata["plan"] = plan_data
+                
+                # Log successful planning
+                plan_steps = plan_data.get('plan', [])
+                await log_agent_planning(
+                    agent_id="agent_loop",
+                    task_id=task.id,
+                    plan=f"Generated {len(plan_steps)}-step execution plan",
+                    steps=[f"Step {i+1}: {step_info.get('description', 'N/A')}" for i, step_info in enumerate(plan_steps)]
+                )
+                
+                await log_agent_monologue(
+                    agent_id="agent_loop",
+                    task_id=task.id,
+                    thoughts=f"Great! I've created a {len(plan_steps)}-step plan. Each step builds on the previous one to accomplish the task efficiently.",
+                    reasoning="Plan validated and ready for execution"
+                )
+                
                 logger.info(f"Generated plan for task {task.id} with {len(plan_data.get('plan', []))} steps")
             except json.JSONDecodeError:
                 # If not valid JSON, store as text plan
                 step.output_data = {"plan_text": plan_text}
                 step.status = "completed"
                 task.metadata["plan_text"] = plan_text
+                
+                await log_agent_event(
+                    event_type=AgentEventType.WARNING,
+                    message="Plan generated but not in valid JSON format, stored as text",
+                    agent_id="agent_loop",
+                    task_id=task.id,
+                    step_id=step.id
+                )
+                
                 logger.warning(f"Plan for task {task.id} is not valid JSON, stored as text")
             
         except Exception as e:
             step.status = "failed"
             step.error = str(e)
+            
+            await log_agent_event(
+                event_type=AgentEventType.STEP_FAILED,
+                message=f"Planning phase failed: {str(e)}",
+                agent_id="agent_loop",
+                task_id=task.id,
+                step_id=step.id,
+                success=False
+            )
+            
             raise e
         finally:
             step.duration = time.time() - step.timestamp
