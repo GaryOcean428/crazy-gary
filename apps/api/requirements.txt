@@ -25,3 +25,4 @@ psutil==7.0.0
 
 redis==5.0.1
 
+flask-sqlalchemy

@@ -35,11 +35,25 @@ app.register_blueprint(monitoring_bp, url_prefix='/api/monitoring')
 app.register_blueprint(heavy_bp, url_prefix='/api/heavy')
 
 # Database configuration
-app.config['SQLALCHEMY_DATABASE_URI'] = f"sqlite:///{os.path.join(os.path.dirname(__file__), 'database', 'app.db')}"
+database_url = os.getenv('DATABASE_URL')
+if database_url:
+    # Use PostgreSQL from Railway
+    app.config['SQLALCHEMY_DATABASE_URI'] = database_url
+else:
+    # Fallback to SQLite for local development
+    app.config['SQLALCHEMY_DATABASE_URI'] = f"sqlite:///{os.path.join(os.path.dirname(__file__), 'database', 'app.db')}"
+
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+# Initialize database
 db.init_app(app)
-with app.app_context():
-    db.create_all()
+try:
+    with app.app_context():
+        db.create_all()
+        print("✅ Database initialized successfully")
+except Exception as e:
+    print(f"❌ Database initialization failed: {e}")
+    # Continue running even if database fails
 
 # Health check endpoint
 @app.route('/health')
@@ -82,13 +96,15 @@ def serve(path):
 init_request_logging(app)
 
 if __name__ == '__main__':
-    port = int(os.getenv('PORT', 3000))
+    # Railway sets PORT environment variable, default to 8080 for Railway compatibility
+    port = int(os.getenv('PORT', 8080))
     host = os.getenv('HOST', '0.0.0.0')
     debug = os.getenv('FLASK_ENV') != 'production'
     
     print(f"🚀 Starting Crazy-Gary API server on {host}:{port}")
     print(f"🔧 Debug mode: {debug}")
     print(f"🌍 Environment: {os.getenv('FLASK_ENV', 'development')}")
+    print(f"🗄️ Database: {'PostgreSQL (Railway)' if os.getenv('DATABASE_URL') else 'SQLite (Local)'}")
     print(f"🧠 Heavy orchestration enabled")
     print(f"⚡ MCP tools integrated")
     
