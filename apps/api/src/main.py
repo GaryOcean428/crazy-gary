@@ -6,6 +6,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 from flask import Flask, send_from_directory
 from flask_cors import CORS
 from src.models.user import db
+from src.models.migrations import run_all_migrations
 from src.routes.user import user_bp
 from src.routes.harmony import harmony_bp
 from src.routes.endpoints import endpoints_bp
@@ -51,6 +52,14 @@ try:
     with app.app_context():
         db.create_all()
         print("✅ Database initialized successfully")
+        
+        # Run migrations to update existing tables
+        migration_success = run_all_migrations()
+        if migration_success:
+            print("✅ Database migrations completed successfully")
+        else:
+            print("⚠️ Some database migrations failed (might be expected)")
+            
 except Exception as e:
     print(f"❌ Database initialization failed: {e}")
     # Continue running even if database fails
