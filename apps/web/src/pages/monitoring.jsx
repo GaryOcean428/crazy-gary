@@ -88,7 +88,7 @@ export function Monitoring() {
     // Auto-refresh every 30 seconds
     const interval = setInterval(refreshData, 30000)
     return () => clearInterval(interval)
-  }, [])
+  }, [fetchDashboardData, refreshData])
 
   const getStatusColor = (status) => {
     switch (status) {

@@ -76,7 +76,7 @@ export function ModelControl() {
       } else {
         throw new Error('Failed to wake endpoint')
       }
-    } catch (error) {
+    } catch {
       toast({
         title: "Error",
         description: `Failed to wake ${modelType} model`,
@@ -106,7 +106,7 @@ export function ModelControl() {
       } else {
         throw new Error('Failed to sleep endpoint')
       }
-    } catch (error) {
+    } catch {
       toast({
         title: "Error",
         description: `Failed to sleep ${modelType} model`,
@@ -135,7 +135,7 @@ export function ModelControl() {
       } else {
         throw new Error('Failed to wake all endpoints')
       }
-    } catch (error) {
+    } catch {
       toast({
         title: "Error",
         description: "Failed to wake all models",
@@ -164,7 +164,7 @@ export function ModelControl() {
       } else {
         throw new Error('Failed to sleep all endpoints')
       }
-    } catch (error) {
+    } catch {
       toast({
         title: "Error",
         description: "Failed to sleep all models",
