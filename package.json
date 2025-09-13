@@ -13,7 +13,14 @@
     "test": "turbo run test",
     "lint": "turbo run lint",
     "type-check": "turbo run type-check",
-    "clean": "turbo run clean"
+    "clean": "turbo run clean",
+    "setup": "./scripts/setup-dev.sh",
+    "performance": "./scripts/performance-monitor.sh",
+    "security": "./scripts/security-setup.sh",
+    "audit": "npm audit && python -m safety check",
+    "format": "prettier --write .",
+    "pre-commit": "npm run lint && npm run type-check && npm run build",
+    "ci": "npm run lint && npm run type-check && npm run build && npm run test"
   },
   "devDependencies": {
     "turbo": "^1.10.0",
