@@ -1,20 +1,16 @@
 """
-Model endpoint configurations for crazy-gary deployment
-Centralized configuration for all AI model endpoints and providers
+HuggingFace model endpoint configurations for crazy-gary deployment
+Centralized configuration for user's specific HuggingFace inference endpoints
 """
 import os
 from typing import Dict, Any, Optional
 from enum import Enum
 
 class ModelProvider(Enum):
-    ANTHROPIC = "anthropic"
-    OPENAI = "openai"
     HUGGINGFACE = "huggingface"
-    TOGETHER = "together"
-    GROQ = "groq"
 
 class ModelEndpointConfig:
-    """Configuration for a single model endpoint"""
+    """Configuration for a HuggingFace model endpoint"""
     
     def __init__(self, 
                  name: str, 
@@ -57,110 +53,32 @@ class ModelEndpointConfig:
             "default_params": self.default_params
         }
 
-# Model endpoint configurations as mentioned in the problem statement
+# HuggingFace model endpoint configurations for user's specific models
 MODEL_ENDPOINTS = {
     "120b": ModelEndpointConfig(
-        name="Claude 3 Opus",
-        provider=ModelProvider.ANTHROPIC,
-        model_id="claude-3-opus-20240229",
-        base_url="https://api.anthropic.com/v1/messages",
-        api_key_env="ANTHROPIC_API_KEY",
+        name="GPT-OSS 120B Crazy Gary",
+        provider=ModelProvider.HUGGINGFACE,
+        model_id="bartowski/huizimao_gpt-oss-120b-uncensored-bf16-GGUF",
+        base_url=os.getenv('HF_BASE_URL_120B', ''),
+        api_key_env="HUGGINGFACE_API_KEY",
         max_tokens=4096,
-        context_window=200000,
+        context_window=8192,
         default_params={
             "temperature": 0.7,
             "top_p": 0.9
         }
     ),
     "20b": ModelEndpointConfig(
-        name="GPT-4 Turbo",
-        provider=ModelProvider.OPENAI,
-        model_id="gpt-4-turbo-preview",
-        base_url="https://api.openai.com/v1/chat/completions",
-        api_key_env="OPENAI_API_KEY",
-        max_tokens=4096,
-        context_window=128000,
-        default_params={
-            "temperature": 0.7,
-            "top_p": 1.0
-        }
-    ),
-    "gpt-4o": ModelEndpointConfig(
-        name="GPT-4o",
-        provider=ModelProvider.OPENAI,
-        model_id="gpt-4o",
-        base_url="https://api.openai.com/v1/chat/completions", 
-        api_key_env="OPENAI_API_KEY",
-        max_tokens=4096,
-        context_window=128000,
-        default_params={
-            "temperature": 0.7,
-            "top_p": 1.0
-        }
-    ),
-    "claude-3-haiku": ModelEndpointConfig(
-        name="Claude 3 Haiku",
-        provider=ModelProvider.ANTHROPIC,
-        model_id="claude-3-haiku-20240307",
-        base_url="https://api.anthropic.com/v1/messages",
-        api_key_env="ANTHROPIC_API_KEY",
-        max_tokens=4096,
-        context_window=200000,
-        default_params={
-            "temperature": 0.7,
-            "top_p": 0.9
-        }
-    ),
-    "mixtral": ModelEndpointConfig(
-        name="Mixtral 8x7B",
-        provider=ModelProvider.TOGETHER,
-        model_id="mistralai/Mixtral-8x7B-Instruct-v0.1",
-        base_url="https://api.together.xyz/v1/chat/completions",
-        api_key_env="TOGETHER_API_KEY",
-        max_tokens=4096,
-        context_window=32768,
-        default_params={
-            "temperature": 0.7,
-            "top_p": 0.9
-        }
-    ),
-    "llama-70b": ModelEndpointConfig(
-        name="Llama 2 70B",
-        provider=ModelProvider.TOGETHER,
-        model_id="meta-llama/Llama-2-70b-chat-hf",
-        base_url="https://api.together.xyz/v1/chat/completions",
-        api_key_env="TOGETHER_API_KEY",
-        max_tokens=4096,
-        context_window=4096,
-        default_params={
-            "temperature": 0.7,
-            "top_p": 0.9
-        }
-    ),
-    "groq-mixtral": ModelEndpointConfig(
-        name="Mixtral 8x7B (Groq)",
-        provider=ModelProvider.GROQ,
-        model_id="mixtral-8x7b-32768",
-        base_url="https://api.groq.com/openai/v1/chat/completions",
-        api_key_env="GROQ_API_KEY",
-        max_tokens=4096,
-        context_window=32768,
-        default_params={
-            "temperature": 0.7,
-            "top_p": 1.0
-        }
-    ),
-    "groq-llama": ModelEndpointConfig(
-        name="Llama 3 70B (Groq)",
-        provider=ModelProvider.GROQ,
-        model_id="llama3-70b-8192",
-        base_url="https://api.groq.com/openai/v1/chat/completions",
-        api_key_env="GROQ_API_KEY",
+        name="OpenAI GPT-OSS 20B Abliterated",
+        provider=ModelProvider.HUGGINGFACE,
+        model_id="DavidAU/OpenAi-GPT-oss-20b-abliterated-uncensored-NEO-Imatrix-gguf",
+        base_url=os.getenv('HF_BASE_URL_20B', ''),
+        api_key_env="HUGGINGFACE_API_KEY",
         max_tokens=4096,
         context_window=8192,
         default_params={
             "temperature": 0.7,
-            "top_p": 1.0
+            "top_p": 0.9
         }
     )
 }
