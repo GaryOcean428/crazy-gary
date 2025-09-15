@@ -4,6 +4,13 @@ import time
 # DON'T CHANGE THIS !!!
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
+# Setup frontend before importing anything else
+try:
+    from setup_frontend import setup_frontend
+    setup_frontend()
+except Exception as e:
+    print(f"⚠️ Frontend setup failed: {e}")
+
 from flask import Flask, send_from_directory
 from flask_cors import CORS
 from flask_socketio import SocketIO
