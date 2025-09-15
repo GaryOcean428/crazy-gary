@@ -18,11 +18,10 @@
       "build": {
         "commands": [
           "echo '🎨 Building frontend...'",
-          "cd apps/web && npm install --legacy-peer-deps",
-          "cd apps/web && npm run build",
+          "./build_frontend.sh",
           "echo '✅ Frontend build completed'",
           "echo '📁 Verifying build output...'",
-          "ls -la apps/web/dist/ || echo 'No dist directory found'",
+          "ls -la apps/api/src/static/ || echo 'No static directory found'",
           "echo '🔧 Build process completed'"
         ]
       }
