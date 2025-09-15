@@ -7,7 +7,7 @@ The crazy-gary repository has been successfully optimized for Railway.com deploy
 ## ✅ All Phases Complete
 
 ### Phase 1: Critical Configuration Fixes ✅
-- **railway.toml**: Complete Railway deployment configuration
+- **railpack.json**: Complete Railway deployment configurations for all services
 - **CORS Configuration**: Production-ready with Railway domain restrictions
 - **WebSocket Configuration**: Secure WSS with proper CORS settings
 - **Environment Variables**: Comprehensive management with validation
@@ -87,7 +87,7 @@ OK (skipped=1)
 ## 🔧 Files Created/Modified
 
 ### New Configuration Files
-- `railway.toml` - Railway deployment configuration
+- `railpack.json` - Railway deployment configurations (root, api, web)
 - `.env.railway` - Environment variables template
 - `.github/workflows/railway-validate.yml` - CI/CD validation
 

@@ -78,28 +78,42 @@ jobs:
             echo "✅ CORS configuration looks good"
           fi
 
-      - name: Check Railway.toml syntax
+      - name: Check Railpack configuration syntax
         run: |
-          if [ -f "railway.toml" ]; then
-            echo "✅ railway.toml found"
-            # Basic syntax check
-            python -c "
-            import tomllib
-            with open('railway.toml', 'rb') as f:
-                data = tomllib.load(f)
-            print('✅ railway.toml syntax is valid')
-            
-            # Check required sections
-            required_sections = ['build', 'deploy']
-            for section in required_sections:
-                if section not in data:
-                    print(f'⚠️ Missing section: {section}')
-                else:
-                    print(f'✅ Found section: {section}')
-            "
-          else
-            echo "⚠️ railway.toml not found - Railway will use defaults"
-          fi
+          echo "Checking Railpack configuration files..."
+          for config_file in railpack.json apps/api/railpack.json apps/web/railpack.json; do
+            if [ -f "$config_file" ]; then
+              echo "✅ $config_file found"
+              # Basic syntax check
+              python -c "
+import json
+try:
+    with open('$config_file', 'r') as f:
+        data = json.load(f)
+    print('✅ $config_file syntax is valid')
+    
+    # Check required sections
+    if 'build' in data:
+        print('✅ Found build section in $config_file')
+    else:
+        print('⚠️ Missing build section in $config_file')
+        
+    if 'deploy' in data:
+        print('✅ Found deploy section in $config_file')
+        if 'startCommand' in data['deploy']:
+            print('✅ Found startCommand in $config_file')
+        else:
+            print('⚠️ Missing startCommand in $config_file')
+    else:
+        print('⚠️ Missing deploy section in $config_file')
+except Exception as e:
+    print(f'❌ Error parsing $config_file: {e}')
+    exit(1)
+              "
+            else
+              echo "⚠️ $config_file not found"
+            fi
+          done
 
       - name: Build frontend
         run: |

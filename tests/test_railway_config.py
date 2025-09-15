@@ -102,17 +102,40 @@ class TestRailwayConfiguration(unittest.TestCase):
                 "DATABASE_URL should be PostgreSQL for Railway"
             )
 
-    def test_railway_toml_exists(self):
-        """Test that railway.toml configuration exists"""
-        railway_toml = Path(__file__).parent.parent / 'railway.toml'
-        self.assertTrue(railway_toml.exists(), "railway.toml should exist for Railway deployment")
+    def test_railpack_configurations_exist(self):
+        """Test that railpack.json configurations exist"""
+        config_paths = [
+            Path(__file__).parent.parent / 'railpack.json',
+            Path(__file__).parent.parent / 'apps' / 'api' / 'railpack.json',
+            Path(__file__).parent.parent / 'apps' / 'web' / 'railpack.json'
+        ]
         
-        # Basic content validation
-        content = railway_toml.read_text()
-        self.assertIn('[build]', content, "railway.toml should have [build] section")
-        self.assertIn('[deploy]', content, "railway.toml should have [deploy] section")
-        self.assertIn('startCommand', content, "railway.toml should specify startCommand")
-        self.assertIn('healthcheckPath', content, "railway.toml should specify healthcheckPath")
+        found_configs = []
+        for config_path in config_paths:
+            if config_path.exists():
+                found_configs.append(config_path)
+        
+        self.assertGreater(len(found_configs), 0, "At least one railpack.json should exist for Railway deployment")
+        
+        # Validate configuration content
+        for config_path in found_configs:
+            with self.subTest(config=str(config_path)):
+                with open(config_path) as f:
+                    config = json.load(f)
+                
+                # Check for basic structure
+                self.assertIn('metadata', config, f"{config_path} should have metadata section")
+                self.assertIn('build', config, f"{config_path} should have build section")
+                self.assertIn('deploy', config, f"{config_path} should have deploy section")
+                
+                # Check deploy configuration
+                deploy = config['deploy']
+                self.assertIn('startCommand', deploy, f"{config_path} should specify startCommand")
+                self.assertIn('healthCheckPath', deploy, f"{config_path} should specify healthCheckPath")
+                
+                # Check build configuration
+                build = config['build']
+                self.assertIn('provider', build, f"{config_path} should specify build provider")
 
     def test_health_check_endpoint(self):
         """Test that health check endpoint is accessible"""

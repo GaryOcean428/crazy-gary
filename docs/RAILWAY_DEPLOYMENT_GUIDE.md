@@ -71,13 +71,15 @@ railway up --service api
 
 ## Configuration Files
 
-### railway.toml
+### railpack.json
 
-The application includes a comprehensive `railway.toml` configuration:
+The application includes comprehensive `railpack.json` configurations for each service:
 
-- **Build Configuration**: Python environment with frontend build
-- **Deploy Configuration**: Health checks, restart policies
-- **Environment Variables**: Production and development settings
+- **Root Configuration**: Main application configuration
+- **API Configuration**: Python/Flask backend service  
+- **Web Configuration**: Node.js/React frontend service
+- **Build Configuration**: Multi-stage build with dependency management
+- **Deploy Configuration**: Health checks, restart policies, and start commands
 
 ### Build Process
 
@@ -263,7 +265,7 @@ railway deployments
 - **Configuration Validator**: `scripts/validate_railway_config.py`
 - **Build Script**: `build_frontend.py`
 - **Test Suite**: `tests/test_railway_config.py`
-- **Railway Config**: `railway.toml`
+- **Railway Configs**: `railpack.json` (root), `apps/api/railpack.json`, `apps/web/railpack.json`
 
 ### Getting Help
 
