@@ -45,7 +45,7 @@ export default [
       '**/*.test.{js,jsx}', 
       '**/__tests__/**/*.{js,jsx}', 
       '**/test-setup.js',
-      '**/lib/test-utils.js'
+      '**/lib/test-utils.jsx'
     ],
     languageOptions: {
       globals: {
