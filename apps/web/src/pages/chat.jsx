@@ -68,7 +68,7 @@ export function Chat() {
       description: 'Creating comprehensive business intelligence report'
     }
   ])
-  const [recentTasks, setRecentTasks] = useState([
+  const [recentTasks, _setRecentTasks] = useState([
     {
       id: 3,
       name: 'Market Research Analysis',
@@ -335,7 +335,7 @@ export function Chat() {
       )}
       
       <div className={`max-w-2xl ${message.type === 'user' ? 'order-first' : ''}`}>
-        <div className={`p-4 rounded-2xl shadow-soft transition-all duration-200 group-hover:shadow-medium ${
+        <div className={`p-4 rounded-2xl shadow-soft transition-all duration-200 group-hover:shadow-lg ${
           message.type === 'user' 
             ? 'bg-primary text-primary-foreground' 
             : message.type === 'agent-thinking'
@@ -588,7 +588,7 @@ export function Chat() {
                   onClick={handleSendMessage}
                   disabled={!inputMessage.trim() || isLoading}
                   size="lg"
-                  className="bg-gradient-primary hover:shadow-medium transition-all duration-200 px-6"
+                  className="bg-gradient-primary hover:shadow-lg transition-all duration-200 px-6"
                 >
                   {isLoading ? (
                     <Loader2 className="h-4 w-4 animate-spin" />

@@ -33,7 +33,7 @@ export function AgentObservability() {
   const [selectedTrace, setSelectedTrace] = useState(null)
   const [realTimeEvents, setRealTimeEvents] = useState([])
   const [isMonitoring, setIsMonitoring] = useState(false)
-  const [filter, setFilter] = useState({
+  const [filter, _setFilter] = useState({
     eventTypes: [],
     agentId: '',
     taskId: ''
