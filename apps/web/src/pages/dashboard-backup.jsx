@@ -195,7 +195,7 @@ export function Dashboard() {
     }
   }
 
-  const StatCard = ({ title, value, change, icon: Icon, trend = 'up' }) => (
+  const StatCard = ({ title, value, change, trend = 'up' }) => (
     <Card className="group hover:shadow-lg transition-all duration-300 border-border/50 hover:border-primary/20">
       <CardContent className="p-6">
         <div className="flex items-center justify-between">
