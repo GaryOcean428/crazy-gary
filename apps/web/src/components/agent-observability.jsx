@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -61,9 +61,9 @@ export function AgentObservability() {
         clearInterval(intervalRef.current)
       }
     }
-  }, [isMonitoring])
+  }, [isMonitoring, fetchMetrics, fetchActiveTraces, fetchCompletedTraces, fetchRealTimeEvents])
 
-  const fetchMetrics = async () => {
+  const fetchMetrics = useCallback(async () => {
     try {
       const response = await fetch('/api/observability/metrics')
       const data = await response.json()
@@ -73,9 +73,9 @@ export function AgentObservability() {
     } catch (error) {
       console.error('Failed to fetch metrics:', error)
     }
-  }
+  }, [])
 
-  const fetchActiveTraces = async () => {
+  const fetchActiveTraces = useCallback(async () => {
     try {
       const response = await fetch('/api/observability/traces/active')
       const data = await response.json()
@@ -85,9 +85,9 @@ export function AgentObservability() {
     } catch (error) {
       console.error('Failed to fetch active traces:', error)
     }
-  }
+  }, [])
 
-  const fetchCompletedTraces = async () => {
+  const fetchCompletedTraces = useCallback(async () => {
     try {
       const response = await fetch('/api/observability/traces/completed?limit=20')
       const data = await response.json()
@@ -97,9 +97,9 @@ export function AgentObservability() {
     } catch (error) {
       console.error('Failed to fetch completed traces:', error)
     }
-  }
+  }, [])
 
-  const fetchRealTimeEvents = async () => {
+  const fetchRealTimeEvents = useCallback(async () => {
     try {
       const since = realTimeEvents.length > 0 
         ? Math.max(...realTimeEvents.map(e => e.timestamp))
@@ -129,7 +129,7 @@ export function AgentObservability() {
     } catch (error) {
       console.error('Failed to fetch real-time events:', error)
     }
-  }
+  }, [realTimeEvents, filter, maxEvents])
 
   const fetchTraceDetails = async (traceId) => {
     try {
