@@ -1,5 +1,6 @@
 import os
 import sys
+import time
 # DON'T CHANGE THIS !!!
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
@@ -18,8 +19,12 @@ from src.routes.monitoring import monitoring_bp
 from src.routes.heavy import heavy_bp
 from src.routes.observability import observability_bp, setup_websocket_handlers
 from src.middleware.request_logging import init_request_logging
+from src.utils.json_encoder import CustomJSONEncoder
 
 app = Flask(__name__, static_folder=os.path.join(os.path.dirname(__file__), 'static'))
+
+# Configure custom JSON encoder for proper serialization
+app.json_encoder = CustomJSONEncoder
 
 # Configure CORS for all routes
 CORS(app, origins="*", allow_headers=["Content-Type", "Authorization"])
@@ -81,6 +86,61 @@ except Exception as e:
 @app.route('/health')
 def health_check():
     return {'status': 'healthy', 'service': 'crazy-gary-api', 'version': '1.0.0'}
+
+@app.route('/api/health')
+def api_health_check():
+    """Enhanced health check for API monitoring"""
+    try:
+        import psutil
+        import redis
+        import psycopg2
+        
+        checks = {
+            "status": "healthy",
+            "timestamp": time.time(),
+            "memory_percent": psutil.virtual_memory().percent,
+            "cpu_percent": psutil.cpu_percent(interval=1),
+            "flask_async": True,  # We now support async
+            "server_type": "hypercorn_asgi"
+        }
+        
+        # Check Redis connection
+        try:
+            redis_url = os.getenv('REDIS_URL')
+            if redis_url:
+                r = redis.from_url(redis_url)
+                r.ping()
+                checks["redis"] = "connected"
+            else:
+                checks["redis"] = "not_configured"
+        except Exception as e:
+            checks["redis"] = f"disconnected: {str(e)}"
+            checks["status"] = "degraded"
+        
+        # Check PostgreSQL connection
+        try:
+            db_url = os.getenv('DATABASE_URL')
+            if db_url:
+                conn = psycopg2.connect(db_url)
+                conn.close()
+                checks["postgres"] = "connected"
+            else:
+                checks["postgres"] = "sqlite_fallback"
+        except Exception as e:
+            checks["postgres"] = f"disconnected: {str(e)}"
+            checks["status"] = "degraded"
+        
+        status_code = 200 if checks["status"] == "healthy" else 503
+        return checks, status_code
+        
+    except ImportError:
+        # Fallback if monitoring packages not available
+        return {
+            "status": "healthy", 
+            "service": "crazy-gary-api",
+            "flask_async": True,
+            "server_type": "hypercorn_asgi"
+        }, 200
 
 @app.route('/health/ready')
 def readiness_check():
