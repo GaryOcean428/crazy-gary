@@ -25,11 +25,7 @@ import {
   Square,
   Eye,
   EyeOff,
-  Clock,
-  CheckCircle,
-  AlertCircle,
   Brain,
-  Zap,
   Sparkles,
   MessageSquare,
   ArrowUp,
@@ -39,11 +35,12 @@ import {
   Settings,
   Mic,
   MicOff,
-  Image as ImageIcon,
+  ImageIcon,
   Paperclip,
   Activity,
   Cpu
-} from 'lucide-react'
+} from '@/lib/icons'
+
 
 export function Chat() {
   const [messages, setMessages] = useState([])
