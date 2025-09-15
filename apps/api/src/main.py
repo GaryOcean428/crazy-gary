@@ -15,6 +15,7 @@ from src.routes.agent import agent_bp
 from src.routes.auth import auth_bp
 from src.routes.monitoring import monitoring_bp
 from src.routes.heavy import heavy_bp
+from src.routes.coder import coder_bp
 from src.middleware.request_logging import init_request_logging
 
 app = Flask(__name__, static_folder=os.path.join(os.path.dirname(__file__), 'static'))
@@ -34,6 +35,7 @@ app.register_blueprint(agent_bp, url_prefix='/api')
 app.register_blueprint(auth_bp, url_prefix='/api/auth')
 app.register_blueprint(monitoring_bp, url_prefix='/api/monitoring')
 app.register_blueprint(heavy_bp, url_prefix='/api/heavy')
+app.register_blueprint(coder_bp, url_prefix='/api/coder')
 
 # Database configuration
 database_url = os.getenv('DATABASE_URL')
