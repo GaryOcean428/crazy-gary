@@ -53,22 +53,31 @@ analyze_memory_usage() {
     
     if command -v python &> /dev/null; then
         python3 << 'EOF'
-import psutil
-import os
-
-# Check current memory usage
-memory = psutil.virtual_memory()
-print(f"Memory usage: {memory.percent}%")
-print(f"Available: {memory.available / (1024**3):.1f}GB")
-print(f"Total: {memory.total / (1024**3):.1f}GB")
-
-if memory.percent > 80:
-    print("⚠️  High memory usage detected")
-    print("   - Consider optimizing database queries")
-    print("   - Check for memory leaks in long-running processes")
-else:
-    print("✅ Memory usage is normal")
+try:
+    import psutil
+    
+    # Check current memory usage
+    memory = psutil.virtual_memory()
+    print(f"Memory usage: {memory.percent}%")
+    print(f"Available: {memory.available / (1024**3):.1f}GB")
+    print(f"Total: {memory.total / (1024**3):.1f}GB")
+    
+    if memory.percent > 80:
+        print("⚠️  High memory usage detected")
+        print("   - Consider optimizing database queries")
+        print("   - Check for memory leaks in long-running processes")
+    else:
+        print("✅ Memory usage is normal")
+except ImportError:
+    print("⚠️  psutil not available - skipping detailed memory analysis")
+    print("✅ Using basic system memory check")
+    # Basic memory check using system commands
+    import os
+    if os.name == 'posix':
+        os.system('free -h 2>/dev/null || echo "Memory info not available"')
 EOF
+    else
+        echo "⚠️  Python not available - skipping memory analysis"
     fi
 }
 

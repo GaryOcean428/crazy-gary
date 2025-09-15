@@ -1,10 +1,13 @@
-# Performance Report - Mon Sep 15 02:22:44 UTC 2025
+# Performance Report - Mon Sep 15 15:07:20 UTC 2025
 
 ## Bundle Sizes
-- dist/assets/index-BLOE3uII.js: 434K
-- dist/assets/router-y9G1WLZM.js: 32K
-- dist/assets/ui-Cw-M-ogS.js: 45K
-- dist/assets/vendor-gH-7aFTg.js: 12K
+- dist/assets/forms-C5hb-Wj8.js: 30
+- dist/assets/icons-B0guCYjF.js: 15K
+- dist/assets/index-j5LFLP6S.js: 378K
+- dist/assets/router-DtXiXYIT.js: 31K
+- dist/assets/ui-8L00TINk.js: 44K
+- dist/assets/utils-TE8zYW_o.js: 26K
+- dist/assets/vendor-HnKmhvXM.js: 11K
 
 ## Build Performance
 - Last build time: 0s

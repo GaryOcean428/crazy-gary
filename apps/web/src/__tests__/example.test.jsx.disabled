@@ -14,7 +14,7 @@ import {
   generateMockUser,
   createMockFetch,
   createComponentTestSuite
-} from '../lib/test-utils'
+} from '../lib/test-utils.jsx'
 
 // Mock components for testing
 const MockButton = ({ onClick, children, disabled = false, ...props }) => (
