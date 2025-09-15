@@ -16,6 +16,13 @@ SQLAlchemy==2.0.23
 Werkzeug==3.0.6
 gunicorn==23.0.0
 
+# Flask-SocketIO for WebSocket support
+flask-socketio==5.3.6
+python-socketio==5.11.0
+python-engineio==4.9.0
+gevent==25.8.2
+bidict==0.23.1
+
 # Testing dependencies
 pytest==7.4.0
 pytest-cov==4.1.0
