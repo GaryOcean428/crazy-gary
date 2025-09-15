@@ -43,6 +43,9 @@ jobs:
           RAILWAY_PRIVATE_DOMAIN: example.railway.internal
           DATABASE_URL: postgresql://test:test@localhost:5432/test
           JWT_SECRET: test_secret_key_32_characters_long
+          HUGGINGFACE_API_KEY: test_key
+          OPENAI_API_KEY: test_key
+          OPENROUTER_API_KEY: test_key
         run: |
           python scripts/validate_railway_config.py
 

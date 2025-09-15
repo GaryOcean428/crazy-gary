@@ -33,17 +33,17 @@
     "health:check": "curl -f http://localhost:8000/health || exit 1"
   },
   "devDependencies": {
-    "turbo": "^1.10.0",
     "@types/node": "^20.0.0",
-    "typescript": "^5.0.0",
-    "eslint": "^8.0.0",
     "@typescript-eslint/eslint-plugin": "^6.0.0",
     "@typescript-eslint/parser": "^6.0.0",
-    "prettier": "^3.0.0"
+    "eslint": "^8.0.0",
+    "prettier": "^3.0.0",
+    "terser": "^5.44.0",
+    "turbo": "^1.10.0",
+    "typescript": "^5.0.0"
   },
   "engines": {
     "node": ">=18.0.0",
     "npm": ">=8.0.0"
   }
 }
-
