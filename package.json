@@ -27,7 +27,10 @@
     "pre-commit": "npm run lint && npm run type-check && npm run build",
     "ci": "npm run lint && npm run type-check && npm run build && npm run test",
     "analyze": "npm run build && npm run performance",
-    "validate": "npm run lint && npm run type-check && npm run test:coverage && npm run audit"
+    "validate": "npm run lint && npm run type-check && npm run test:coverage && npm run audit",
+    "validate:railway": "python scripts/validate_railway_config.py",
+    "deploy:railway": "npm run validate:railway && npm run build",
+    "health:check": "curl -f http://localhost:8000/health || exit 1"
   },
   "devDependencies": {
     "turbo": "^1.10.0",
