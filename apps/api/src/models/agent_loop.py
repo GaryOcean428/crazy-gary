@@ -227,7 +227,20 @@ class AgentLoop:
             "created_at": task.created_at,
             "started_at": task.started_at,
             "completed_at": task.completed_at,
-            "steps": [asdict(step) for step in task.steps],
+            "steps": [
+                {
+                    "id": step.id,
+                    "type": step.type.value,  # Explicitly convert enum to value
+                    "description": step.description,
+                    "input_data": step.input_data,
+                    "output_data": step.output_data,
+                    "status": step.status.value if hasattr(step, 'status') and step.status else None,
+                    "started_at": step.started_at if hasattr(step, 'started_at') else None,
+                    "completed_at": step.completed_at if hasattr(step, 'completed_at') else None,
+                    "error": step.error if hasattr(step, 'error') else None
+                }
+                for step in task.steps
+            ],
             "result": task.result,
             "error": task.error,
             "metadata": task.metadata
