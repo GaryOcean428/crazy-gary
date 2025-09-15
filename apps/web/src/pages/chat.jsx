@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -99,7 +99,61 @@ export function Chat() {
   const [currentTaskId, setCurrentTaskId] = useState(null)
   const [showAgentThoughts, setShowAgentThoughts] = useState(true)
   const messagesEndRef = useRef(null)
+  const agentMonitoringCleanupRef = useRef(null)
   const { toast } = useToast()
+
+  const fetchAgentEvents = useCallback(async (taskId) => {
+    try {
+      const response = await fetch(`/api/observability/events/task/${taskId}`)
+      const data = await response.json()
+      
+      if (data.success && data.events.length > 0) {
+        // Filter for monologue and planning events
+        const thoughts = data.events.filter(event => 
+          event.event_type === 'monologue' || 
+          event.event_type === 'planning' || 
+          event.event_type === 'reasoning'
+        )
+        
+        setAgentMonologue(prev => {
+          const newThoughts = thoughts.filter(thought => 
+            !prev.some(existing => existing.id === thought.id)
+          )
+          return [...prev, ...newThoughts].slice(-20) // Keep last 20 thoughts
+        })
+      }
+    } catch (error) {
+      console.error('Failed to fetch agent events:', error)
+    }
+  }, [])
+
+  const startAgentMonitoring = useCallback(() => {
+    try {
+      // Clear any existing monitoring
+      if (agentMonitoringCleanupRef.current) {
+        agentMonitoringCleanupRef.current()
+      }
+
+      // Poll for real-time agent events
+      const eventInterval = setInterval(async () => {
+        if (currentTaskId) {
+          await fetchAgentEvents(currentTaskId)
+        }
+      }, 2000)
+      
+      // Store cleanup function
+      agentMonitoringCleanupRef.current = () => clearInterval(eventInterval)
+    } catch (error) {
+      console.error('Failed to start agent monitoring:', error)
+    }
+  }, [currentTaskId, fetchAgentEvents])
+
+  const stopAgentMonitoring = useCallback(() => {
+    if (agentMonitoringCleanupRef.current) {
+      agentMonitoringCleanupRef.current()
+      agentMonitoringCleanupRef.current = null
+    }
+  }, [])
 
   useEffect(() => {
     // Add enhanced welcome message
@@ -126,51 +180,7 @@ export function Chat() {
       clearInterval(interval)
       stopAgentMonitoring()
     }
-  }, [])
-
-  const startAgentMonitoring = async () => {
-    try {
-      // Poll for real-time agent events
-      const eventInterval = setInterval(async () => {
-        if (currentTaskId) {
-          await fetchAgentEvents(currentTaskId)
-        }
-      }, 2000)
-      
-      return () => clearInterval(eventInterval)
-    } catch (error) {
-      console.error('Failed to start agent monitoring:', error)
-    }
-  }
-
-  const stopAgentMonitoring = () => {
-    // Cleanup monitoring when component unmounts
-  }
-
-  const fetchAgentEvents = async (taskId) => {
-    try {
-      const response = await fetch(`/api/observability/events/task/${taskId}`)
-      const data = await response.json()
-      
-      if (data.success && data.events.length > 0) {
-        // Filter for monologue and planning events
-        const thoughts = data.events.filter(event => 
-          event.event_type === 'monologue' || 
-          event.event_type === 'planning' || 
-          event.event_type === 'reasoning'
-        )
-        
-        setAgentMonologue(prev => {
-          const newThoughts = thoughts.filter(thought => 
-            !prev.some(existing => existing.id === thought.id)
-          )
-          return [...prev, ...newThoughts].slice(-20) // Keep last 20 thoughts
-        })
-      }
-    } catch (error) {
-      console.error('Failed to fetch agent events:', error)
-    }
-  }
+  }, [startAgentMonitoring, stopAgentMonitoring])
 
   useEffect(() => {
     scrollToBottom()

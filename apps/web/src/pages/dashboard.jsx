@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -94,13 +94,7 @@ export function Dashboard() {
     network: 12
   })
 
-  useEffect(() => {
-    fetchDashboardData()
-    const interval = setInterval(fetchDashboardData, 5000) // Refresh every 5 seconds
-    return () => clearInterval(interval)
-  }, [])
-
-  const fetchDashboardData = async () => {
+  const fetchDashboardData = useCallback(async () => {
     try {
       // Simulate real-time data updates
       setSystemStats(prev => ({
@@ -159,7 +153,13 @@ export function Dashboard() {
     } catch (error) {
       console.error('Failed to fetch dashboard data:', error)
     }
-  }
+  }, [])
+
+  useEffect(() => {
+    fetchDashboardData()
+    const interval = setInterval(fetchDashboardData, 5000) // Refresh every 5 seconds
+    return () => clearInterval(interval)
+  }, [fetchDashboardData])
 
   const _getStatusColor = (status) => {
     switch (status) {
