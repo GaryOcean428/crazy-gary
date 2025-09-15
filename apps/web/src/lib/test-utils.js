@@ -47,7 +47,7 @@ export const createMockFetch = (responses = {}) => {
 // Custom render function with providers
 export const renderWithProviders = (ui, options = {}) => {
   const {
-    initialEntries = ['/'],
+    _initialEntries = ['/'],
     ...renderOptions
   } = options
 
