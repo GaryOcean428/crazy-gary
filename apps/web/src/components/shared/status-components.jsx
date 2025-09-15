@@ -64,7 +64,7 @@ export function McpStatusCard({ name, status, operations }) {
 /**
  * System metric card component
  */
-export function SystemMetricCard({ title, value, percentage, icon: IconComponent, trend }) {
+export function SystemMetricCard({ title, value, percentage, icon: _IconComponent, trend }) {
   const getTrendColor = (trend) => {
     if (trend > 0) return 'text-green-600'
     if (trend < 0) return 'text-red-600'

@@ -195,16 +195,64 @@ cd tests
 pytest
 ```
 
+## 🗺️ **Roadmap**
+
+Crazy-Gary follows a structured three-quarter roadmap focused on building a production-ready autonomous AI platform:
+
+### **Q1 - Foundations & Reliability** 🏗️
+- **Architecture**: Full A2A AgentCard + MCP integration
+- **Deployment**: Rock-solid Railway configs with health checks
+- **Developer Experience**: Yarn workspace constraints, immutable installs, preview environments
+- **UI/UX**: Enhanced Task Manager, skeleton loaders, keyboard shortcuts
+- **Security**: Hardened sessions, audit logs, secrets scanning
+
+### **Q2 - Intelligence & Advanced Features** 🧠
+- **MCP Expansion**: Supabase and Slack connectors, tool consent flows
+- **Orchestration**: QuerySkill() for dynamic discovery, push notification webhooks
+- **Advanced UI/UX**: Heavy Mode enhancements, undo/redo, accessibility themes
+- **Observability**: Railway logs integration, session replay, comprehensive testing
+- **Testing**: Visual regression, chaos testing, accessibility CI
+
+### **Q3 - Growth, Adoption & Monetization** 📈
+- **AI Differentiation**: Semantic search, anomaly detection, personalization
+- **Growth Features**: Multi-tenant workspaces, public sharing, weekly recaps
+- **Monetization**: Tiered plans (Free/Pro/Enterprise), usage dashboards, soft-gate upsells
+- **Community**: In-app changelog, contributor guide, developer API docs
+
+**📋 Detailed Roadmap**: See [`docs/ROADMAP_IMPLEMENTATION.md`](docs/ROADMAP_IMPLEMENTATION.md) for complete implementation details and issue tracking.
+
 ## 🤝 **Contributing**
 
-Contributions are welcome! Please feel free to submit a pull request or open an issue.
+We welcome contributions! Our roadmap provides clear opportunities to contribute across all skill levels.
 
+### **Getting Started**
+1. Review the [Developer Guide](docs/DEVELOPER_GUIDE.md)
+2. Check our [Roadmap Implementation](docs/ROADMAP_IMPLEMENTATION.md) for current priorities
+3. Look for issues labeled `good-first-issue` or your preferred quarter (`q1`, `q2`, `q3`)
+
+### **Contribution Process**
 1. Fork the repository.
 2. Create a new branch (`git checkout -b feature/your-feature`).
-3. Make your changes.
-4. Commit your changes (`git commit -m 'Add some feature'`).
-5. Push to the branch (`git push origin feature/your-feature`).
-6. Open a pull request.
+3. Make your changes following our coding standards.
+4. Add tests for new functionality.
+5. Ensure all quality checks pass (`npm run pre-commit`).
+6. Commit your changes (`git commit -m 'Add some feature'`).
+7. Push to the branch (`git push origin feature/your-feature`).
+8. Open a pull request with a clear description.
+
+### **Issue Templates**
+We provide templates for different types of contributions:
+- **[Epic]**: Large features spanning multiple issues
+- **[Feature]**: New functionality requests
+- **[Bug]**: Bug reports with reproduction steps
+- **[Deploy]**: Infrastructure and deployment issues
+
+### **Development Standards**
+- **Code Quality**: Zero linting errors enforced
+- **Testing**: Comprehensive test coverage required
+- **Documentation**: All features must be documented
+- **Accessibility**: WCAG compliance for UI changes
+- **Security**: Security review for authentication/authorization changes
 
 ## 📄 **License**
 

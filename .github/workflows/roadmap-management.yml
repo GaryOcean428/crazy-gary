@@ -1,0 +1,167 @@
+name: Roadmap Issue Management
+
+on:
+  issues:
+    types: [opened, edited, labeled, unlabeled, assigned, unassigned]
+  pull_request:
+    types: [opened, synchronize, closed]
+
+jobs:
+  issue-management:
+    name: 🗺️ Roadmap Issue Management
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Add to project
+      if: github.event.action == 'opened'
+      uses: actions/add-to-project@v0.5.0
+      with:
+        project-url: https://github.com/orgs/GaryOcean428/projects/1
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+    
+    - name: Set epic issues to high priority
+      if: contains(github.event.issue.labels.*.name, 'epic') && github.event.action == 'opened'
+      uses: actions/github-script@v7
+      with:
+        script: |
+          github.rest.issues.addLabels({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            issue_number: context.issue.number,
+            labels: ['high-priority']
+          })
+    
+    - name: Auto-assign quarter milestone
+      if: github.event.action == 'labeled'
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const label = context.payload.label.name;
+          let milestone = null;
+          
+          if (label === 'q1') {
+            milestone = 'Q1 - Foundations & Reliability';
+          } else if (label === 'q2') {
+            milestone = 'Q2 - Intelligence & Advanced Features';
+          } else if (label === 'q3') {
+            milestone = 'Q3 - Growth & Monetization';
+          }
+          
+          if (milestone) {
+            // Get milestone number
+            const milestones = await github.rest.issues.listMilestones({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open'
+            });
+            
+            const targetMilestone = milestones.data.find(m => m.title === milestone);
+            
+            if (targetMilestone) {
+              await github.rest.issues.update({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                milestone: targetMilestone.number
+              });
+            }
+          }
+    
+    - name: Comment on epic creation
+      if: contains(github.event.issue.labels.*.name, 'epic') && github.event.action == 'opened'
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const comment = `🎯 **Epic Created**
+          
+          Thank you for creating this epic! Here's what happens next:
+          
+          ### Next Steps:
+          1. Break down this epic into smaller, actionable issues
+          2. Link related issues to this epic using "Related Epic: #${context.issue.number}"
+          3. Assign appropriate quarter and priority labels
+          4. Add detailed acceptance criteria
+          
+          ### Epic Guidelines:
+          - Keep epics focused on a single major feature or initiative
+          - Aim for 5-8 related issues per epic
+          - Include clear success criteria and dependencies
+          - Update epic description as work progresses
+          
+          ### Resources:
+          - [Roadmap Implementation Guide](docs/ROADMAP_IMPLEMENTATION.md)
+          - [Issue Templates](.github/ISSUE_TEMPLATE/)
+          - [Project Board Setup](.github/PROJECT_SETUP.md)
+          
+          Happy coding! 🚀`;
+          
+          github.rest.issues.createComment({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            issue_number: context.issue.number,
+            body: comment
+          })
+
+  roadmap-progress:
+    name: 📊 Update Roadmap Progress  
+    runs-on: ubuntu-latest
+    if: github.event.action == 'closed' && github.event.issue.state == 'closed'
+    
+    steps:
+    - name: Update epic progress
+      uses: actions/github-script@v7
+      with:
+        script: |
+          // Check if this is an epic or regular issue
+          const isEpic = context.payload.issue.labels.some(label => label.name === 'epic');
+          
+          if (!isEpic) {
+            // Find related epic from issue body
+            const body = context.payload.issue.body || '';
+            const epicMatch = body.match(/Related Epic: #(\d+)/);
+            
+            if (epicMatch) {
+              const epicNumber = parseInt(epicMatch[1]);
+              
+              // Get epic issue
+              const epic = await github.rest.issues.get({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: epicNumber
+              });
+              
+              // Add completion comment to epic
+              const comment = `✅ **Issue Completed**: #${context.issue.number} - ${context.payload.issue.title}
+              
+              This issue has been completed and closed. Epic progress updated.`;
+              
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: epicNumber,
+                body: comment
+              });
+            }
+          } else {
+            // Epic completed
+            const comment = `🎉 **Epic Completed!**
+            
+            This epic has been marked as complete. Great work team! 
+            
+            ### Impact:
+            - Roadmap milestone achieved
+            - Team velocity improved
+            - User value delivered
+            
+            Consider:
+            - [ ] Updating documentation
+            - [ ] Sharing success with the team
+            - [ ] Planning next epic priorities`;
+            
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: comment
+            });
+          }
