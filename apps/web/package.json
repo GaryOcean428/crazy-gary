@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite --host",
-    "build": "vite build",
+    "build": "VITE_API_URL=/api vite build",
+    "build:production": "NODE_ENV=production VITE_API_URL=https://coder.fastmonkey.au/api vite build",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "preview": "vite preview",
