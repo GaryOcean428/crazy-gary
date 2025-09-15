@@ -11,6 +11,40 @@ logger = logging.getLogger(__name__)
 
 endpoints_bp = Blueprint('endpoints', __name__, url_prefix='/api/endpoints')
 
+@endpoints_bp.route('/models/config', methods=['GET'])
+@cross_origin()
+def get_model_configurations():
+    """Get configured HuggingFace model endpoints and their availability"""
+    try:
+        from src.config.model_endpoints import get_model_status, get_available_models
+        
+        all_models = get_model_status()
+        available_models = {k: v.to_dict() for k, v in get_available_models().items()}
+        
+        return jsonify({
+            'all_models': all_models,
+            'available_models': list(available_models.keys()),
+            'total_configured': len(all_models),
+            'total_available': len(available_models),
+            'provider': 'huggingface',
+            'models': {
+                '120b': {
+                    'name': 'GPT-OSS 120B Crazy Gary',
+                    'endpoint': 'gpt-oss-120b-crazy-gary',
+                    'url': 'https://bt9rtjy5bs4cuz9e.us-east-1.aws.endpoints.huggingface.cloud'
+                },
+                '20b': {
+                    'name': 'OpenAI GPT-OSS 20B Abliterated',
+                    'endpoint': 'openai-gpt-oss-20b-abliterat-sdu',
+                    'url': 'https://uezyopflin0swh80.us-east-1.aws.endpoints.huggingface.cloud'
+                }
+            }
+        })
+        
+    except Exception as e:
+        logger.error(f"Error getting model configurations: {str(e)}")
+        return jsonify({'error': f'Failed to get model configurations: {str(e)}'}), 500
+
 @endpoints_bp.route('/status', methods=['GET'])
 @cross_origin()
 def get_all_endpoint_status():
