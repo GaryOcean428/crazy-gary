@@ -16,6 +16,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 
 # Configure logging
 logging.basicConfig(
@@ -103,6 +104,9 @@ def create_app():
         version="1.0.0",
         debug=DEBUG
     )
+    
+    # Add GZip compression middleware
+    app.add_middleware(GZipMiddleware, minimum_size=1000)
     
     # Configure CORS
     cors_origins = os.getenv('CORS_ORIGINS', '*')
