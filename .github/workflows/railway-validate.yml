@@ -1,4 +1,6 @@
 name: Railway Configuration Validation
+permissions:
+  contents: read
 
 on:
   push:
