@@ -34,15 +34,33 @@ export default defineConfig({
     assetsDir: 'assets',
     sourcemap: false,
     emptyOutDir: true,
+    // Performance optimizations
+    minify: 'terser',
+    terserOptions: {
+      compress: {
+        drop_console: true,
+        drop_debugger: true,
+        pure_funcs: ['console.log', 'console.info', 'console.debug']
+      }
+    },
     rollupOptions: {
       output: {
         manualChunks: {
           vendor: ['react', 'react-dom'],
           router: ['react-router-dom'],
-          ui: ['@radix-ui/react-dialog', '@radix-ui/react-toast']
-        }
+          ui: ['@radix-ui/react-dialog', '@radix-ui/react-toast'],
+          forms: ['react-hook-form', '@hookform/resolvers'],
+          icons: ['lucide-react'],
+          utils: ['clsx', 'tailwind-merge', 'class-variance-authority']
+        },
+        // Optimize chunk file names
+        chunkFileNames: 'assets/[name]-[hash].js',
+        entryFileNames: 'assets/[name]-[hash].js',
+        assetFileNames: 'assets/[name]-[hash].[ext]'
       }
-    }
+    },
+    // Increase chunk size warning limit for Railway deployment
+    chunkSizeWarningLimit: 1000
   },
   // Environment variable handling
   define: {

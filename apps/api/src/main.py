@@ -27,6 +27,8 @@ from src.routes.heavy import heavy_bp
 from src.routes.coder import coder_bp
 from src.routes.observability import observability_bp, setup_websocket_handlers
 from src.middleware.request_logging import init_request_logging
+from src.middleware.security import setup_security
+from src.utils.monitoring import setup_monitoring, setup_railway_monitoring
 from src.utils.json_encoder import CustomJSONEncoder
 
 app = Flask(__name__, static_folder=os.path.join(os.path.dirname(__file__), 'static'))
@@ -248,6 +250,15 @@ def serve(path=''):
 
 # Initialize middleware
 init_request_logging(app)
+
+# Setup security middleware
+setup_security(app)
+
+# Setup monitoring and metrics
+setup_monitoring(app)
+
+# Setup Railway-specific monitoring
+railway_config = setup_railway_monitoring()
 
 # Setup WebSocket handlers for observability
 setup_websocket_handlers(socketio)
