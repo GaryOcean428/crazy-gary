@@ -37,7 +37,7 @@ export function Dashboard() {
     toolsAvailable: 12
   })
   
-  const [modelStatus, setModelStatus] = useState({
+  const [modelStatus, _setModelStatus] = useState({
     'gpt-4': { status: 'running', load: 45, requests: 1247 },
     'claude-3': { status: 'running', load: 32, requests: 892 },
     'gemini-pro': { status: 'idle', load: 0, requests: 0 },
@@ -45,14 +45,14 @@ export function Dashboard() {
     'mistral': { status: 'running', load: 78, requests: 2156 }
   })
   
-  const [mcpStatus, setMcpStatus] = useState({
+  const [mcpStatus, _setMcpStatus] = useState({
     'file-system': { status: 'connected', operations: 45 },
     'web-scraper': { status: 'connected', operations: 23 },
     'database': { status: 'disconnected', operations: 0 },
     'email-client': { status: 'connected', operations: 12 }
   })
   
-  const [recentTasks, setRecentTasks] = useState([
+  const [recentTasks, _setRecentTasks] = useState([
     {
       id: 1,
       name: 'Analyze market trends',
@@ -161,7 +161,7 @@ export function Dashboard() {
     }
   }
 
-  const getStatusColor = (status) => {
+  const _getStatusColor = (status) => {
     switch (status) {
       case 'running':
       case 'connected':
@@ -197,8 +197,9 @@ export function Dashboard() {
     }
   }
 
+  // eslint-disable-next-line no-unused-vars
   const StatCard = ({ title, value, change, icon: Icon, trend = 'up' }) => (
-    <Card className="group hover:shadow-medium transition-all duration-300 border-border/50 hover:border-primary/20">
+    <Card className="group hover:shadow-lg transition-all duration-300 border-border/50 hover:border-primary/20">
       <CardContent className="p-6">
         <div className="flex items-center justify-between">
           <div className="space-y-2">

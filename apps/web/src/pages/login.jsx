@@ -103,7 +103,7 @@ export function Login() {
             <div className="flex justify-center mb-4">
               <div className="relative group">
                 <div className="absolute -inset-1 bg-gradient-primary rounded-full blur opacity-30 group-hover:opacity-50 transition duration-300"></div>
-                <div className="relative p-4 bg-card rounded-full border shadow-soft group-hover:shadow-medium transition-all duration-300">
+                <div className="relative p-4 bg-card rounded-full border shadow-soft group-hover:shadow-lg transition-all duration-300">
                   <Bot className="h-10 w-10 text-primary" />
                   <Sparkles className="absolute -top-1 -right-1 h-4 w-4 text-chart-1 animate-pulse" />
                 </div>
@@ -185,7 +185,7 @@ export function Login() {
 
                 <Button 
                   type="submit" 
-                  className="w-full h-12 text-base font-medium bg-gradient-primary hover:shadow-medium transition-all duration-200 group" 
+                  className="w-full h-12 text-base font-medium bg-gradient-primary hover:shadow-lg transition-all duration-200 group" 
                   disabled={loading || !email || !password}
                 >
                   {loading ? (

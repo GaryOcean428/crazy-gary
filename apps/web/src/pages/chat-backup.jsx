@@ -79,7 +79,7 @@ export function Chat() {
       completedAt: Date.now() - 7200000 // 2 hours ago
     }
   ])
-  const [isListening, setIsListening] = useState(false)
+  const [_isListening, _setIsListening] = useState(false)
   const messagesEndRef = useRef(null)
   const { toast } = useToast()
 
@@ -91,7 +91,6 @@ export function Chat() {
       content: "👋 **Welcome to Crazy-Gary!** I'm your advanced autonomous AI agent.\n\nI can help you with:\n• **Complex data analysis** and processing\n• **Automated research** and report generation\n• **Multi-step workflows** with tool orchestration\n• **Real-time monitoring** and task management\n\nJust describe what you need, and I'll break it down into executable steps!",
       timestamp: Date.now(),
       enhanced: true
-    }])
     }])
     
     // Fetch initial tasks
