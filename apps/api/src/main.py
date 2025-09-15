@@ -5,6 +5,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 from flask import Flask, send_from_directory
 from flask_cors import CORS
+from flask_socketio import SocketIO
 from src.models.user import db
 from src.models.migrations import run_all_migrations
 from src.routes.user import user_bp
@@ -15,13 +16,23 @@ from src.routes.agent import agent_bp
 from src.routes.auth import auth_bp
 from src.routes.monitoring import monitoring_bp
 from src.routes.heavy import heavy_bp
-from src.routes.observability import observability_bp
+from src.routes.observability import observability_bp, setup_websocket_handlers
 from src.middleware.request_logging import init_request_logging
 
 app = Flask(__name__, static_folder=os.path.join(os.path.dirname(__file__), 'static'))
 
 # Configure CORS for all routes
 CORS(app, origins="*", allow_headers=["Content-Type", "Authorization"])
+
+# Initialize SocketIO with Redis message queue for Railway
+socketio = SocketIO(
+    app,
+    cors_allowed_origins="*",
+    async_mode='gevent',
+    message_queue=os.environ.get('REDIS_URL', None),
+    logger=True,
+    engineio_logger=True
+)
 
 # Load configuration from environment variables
 app.config['SECRET_KEY'] = os.getenv('JWT_SECRET', 'asdf#FGSgvasgf$5$WGT')
@@ -106,6 +117,9 @@ def serve(path):
 # Initialize middleware
 init_request_logging(app)
 
+# Setup WebSocket handlers for observability
+setup_websocket_handlers(socketio)
+
 if __name__ == '__main__':
     # Railway sets PORT environment variable, default to 8080 for Railway compatibility
     port = int(os.getenv('PORT', 8080))
@@ -118,5 +132,6 @@ if __name__ == '__main__':
     print(f"🗄️ Database: {'PostgreSQL (Railway)' if os.getenv('DATABASE_URL') else 'SQLite (Local)'}")
     print(f"🧠 Heavy orchestration enabled")
     print(f"⚡ MCP tools integrated")
+    print(f"🌐 WebSocket support enabled with SocketIO")
     
-    app.run(host=host, port=port, debug=debug)
+    socketio.run(app, host=host, port=port, debug=debug)

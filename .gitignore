@@ -124,3 +124,51 @@ Dockerfile*
 # Railway
 railway.toml
 
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+.coverage
+.tox/
+.cache
+pip-log.txt
+pip-delete-this-directory.txt
+.hypothesis/
+.installed.cfg
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Flask
+instance/
+.webassets-cache
+
+# SQLite
+*.db
+*.sqlite
+*.sqlite3
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# pyenv
+.python-version
+
+# Poetry
+poetry.lock
+
+# Virtual environments
+apps/api/venv/
+apps/api/.venv/
+
