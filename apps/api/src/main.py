@@ -134,4 +134,15 @@ if __name__ == '__main__':
     print(f"⚡ MCP tools integrated")
     print(f"🌐 WebSocket support enabled with SocketIO")
     
+    # Environment variable status for debugging
+    env_status = {
+        'HUGGINGFACE_API_KEY': '✅ Set' if os.getenv('HUGGINGFACE_API_KEY') else '❌ Missing',
+        'DATABASE_URL': '✅ Set' if os.getenv('DATABASE_URL') else '❌ Missing (using SQLite)',
+        'JWT_SECRET': '✅ Set' if os.getenv('JWT_SECRET') else '⚠️ Using default',
+        'PORT': f"✅ {port}",
+    }
+    print("📋 Environment Variables:")
+    for key, status in env_status.items():
+        print(f"   {key}: {status}")
+    
     socketio.run(app, host=host, port=port, debug=debug)
