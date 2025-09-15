@@ -8,14 +8,9 @@ import {
   Activity, 
   Brain, 
   Zap, 
-  Clock, 
-  CheckCircle, 
-  AlertCircle,
   TrendingUp,
   Server,
   Wrench,
-  Play,
-  Pause,
   Sparkles,
   BarChart3,
   LineChart,
@@ -23,19 +18,25 @@ import {
   ArrowUpRight,
   ArrowDownRight,
   Users,
+  Eye,
+  CheckCircle,
   Cpu,
   HardDrive,
-  Network,
-  Eye
-} from 'lucide-react'
+  Network
+} from '@/lib/icons'
+import { 
+  formatSystemStats
+} from '@/lib/component-utils'
 
 export function Dashboard() {
-  const [systemStats, setSystemStats] = useState({
-    tasksCompleted: 156,
-    tasksRunning: 3,
-    modelsActive: 5,
-    toolsAvailable: 12
-  })
+  const [systemStats, setSystemStats] = useState(
+    formatSystemStats({
+      tasksCompleted: 156,
+      tasksRunning: 3,
+      modelsActive: 5,
+      toolsAvailable: 12
+    })
+  )
   
   const [modelStatus, _setModelStatus] = useState({
     'gpt-4': { status: 'running', load: 45, requests: 1247 },
@@ -58,7 +59,7 @@ export function Dashboard() {
       name: 'Analyze market trends',
       status: 'completed',
       duration: '2m 34s',
-      timestamp: '8:44:05 AM',
+      timestamp: new Date(Date.now() - 240000).toISOString(), // 4 min ago
       progress: 100
     },
     {
@@ -66,7 +67,7 @@ export function Dashboard() {
       name: 'Generate report summary',
       status: 'running',
       duration: '1m 12s',
-      timestamp: '8:47:05 AM',
+      timestamp: new Date(Date.now() - 60000).toISOString(), // 1 min ago
       progress: 67
     },
     {
@@ -74,7 +75,7 @@ export function Dashboard() {
       name: 'Web scraping task',
       status: 'completed',
       duration: '45s',
-      timestamp: '8:39:05 AM',
+      timestamp: new Date(Date.now() - 600000).toISOString(), // 10 min ago
       progress: 100
     },
     {
@@ -82,7 +83,7 @@ export function Dashboard() {
       name: 'Data processing pipeline',
       status: 'running',
       duration: '5m 23s',
-      timestamp: '8:42:15 AM',
+      timestamp: new Date(Date.now() - 180000).toISOString(), // 3 min ago
       progress: 34
     }
   ])
