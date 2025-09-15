@@ -1,2 +1,2 @@
-web: cd apps/api && gunicorn --worker-class gevent -w 1 --bind 0.0.0.0:$PORT --timeout 120 --keep-alive 5 --log-level info src.main:app
+web: cd apps/api && hypercorn --bind 0.0.0.0:$PORT --workers 2 --access-logfile - --error-logfile - src.main:app
 
