@@ -66,13 +66,21 @@ class HarmonyClient:
         self.hf_20b_url = os.getenv('HF_BASE_URL_20B')
         self.hf_api_key = os.getenv('HUGGINGFACE_API_KEY')
         
-        if not self.hf_api_key:
-            raise ValueError("HUGGINGFACE_API_KEY environment variable is required")
+        # Allow initialization without API key for graceful degradation
+        self._available = bool(self.hf_api_key)
+        if not self._available:
+            print("⚠️ HUGGINGFACE_API_KEY not set - HarmonyClient will be disabled")
         
         self.session = None
         self.endpoint_manager = None
     
+    def is_available(self) -> bool:
+        """Check if HarmonyClient is available (has required API key)."""
+        return self._available
+    
     async def __aenter__(self):
+        if not self._available:
+            return self
         self.session = aiohttp.ClientSession()
         self.endpoint_manager = HuggingFaceEndpointManager()
         await self.endpoint_manager.__aenter__()
@@ -168,7 +176,7 @@ class HarmonyClient:
     
     async def is_model_available(self, model_type: str) -> bool:
         """Check if a model is available"""
-        if not self.endpoint_manager:
+        if not self._available or not self.endpoint_manager:
             return False
         
         try:
@@ -185,6 +193,15 @@ class HarmonyClient:
     
     async def generate_response(self, harmony_message: HarmonyMessage) -> HarmonyMessage:
         """Generate response using HuggingFace models with fallback"""
+        if not self._available:
+            # Return a graceful degradation response
+            harmony_message.response = {
+                'status': 'error',
+                'error': 'HarmonyClient unavailable - HUGGINGFACE_API_KEY not configured',
+                'message': 'AI model integration is currently unavailable. Please configure HUGGINGFACE_API_KEY environment variable.'
+            }
+            return harmony_message
+            
         messages = harmony_message.messages
         settings = harmony_message.settings or ModelSettings()
         tools = harmony_message.tools or []
