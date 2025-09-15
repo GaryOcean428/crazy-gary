@@ -10,7 +10,7 @@ class ErrorBoundary extends React.Component {
     this.state = { hasError: false, error: null, errorInfo: null }
   }
 
-  static getDerivedStateFromError(error) {
+  static getDerivedStateFromError(_error) {
     return { hasError: true }
   }
 
@@ -22,7 +22,7 @@ class ErrorBoundary extends React.Component {
     })
 
     // Log to external service in production
-    if (process.env.NODE_ENV === 'production') {
+    if (typeof process !== 'undefined' && process.env.NODE_ENV === 'production') {
       // TODO: Integrate with error tracking service (Sentry, LogRocket, etc.)
     }
   }
@@ -50,7 +50,7 @@ class ErrorBoundary extends React.Component {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              {process.env.NODE_ENV === 'development' && this.state.error && (
+              {typeof process !== 'undefined' && process.env.NODE_ENV === 'development' && this.state.error && (
                 <details className="text-sm">
                   <summary className="cursor-pointer font-medium mb-2">
                     Error Details (Development)
@@ -82,11 +82,11 @@ class ErrorBoundary extends React.Component {
 }
 
 // Higher-order component for functional components
-export const withErrorBoundary = (Component) => {
-  return function WrappedComponent(props) {
+export const withErrorBoundary = (_WrappedComponent) => {
+  return function WithErrorBoundaryComponent(props) {
     return (
       <ErrorBoundary>
-        <Component {...props} />
+        <_WrappedComponent {...props} />
       </ErrorBoundary>
     )
   }
@@ -107,7 +107,7 @@ export const useErrorHandler = () => {
     })
 
     // Log to external service in production
-    if (process.env.NODE_ENV === 'production') {
+    if (typeof process !== 'undefined' && process.env.NODE_ENV === 'production') {
       // TODO: Send to error tracking service
     }
   }, [toast])

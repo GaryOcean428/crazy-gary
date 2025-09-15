@@ -4,6 +4,7 @@
  */
 
 import React, { useCallback, useMemo, useRef, useEffect, useState } from 'react'
+import ErrorBoundary from '../components/error-boundary'
 
 // Debounce hook for input handling
 export const useDebounce = (value, delay) => {
@@ -218,10 +219,6 @@ export const usePerformanceMonitor = (name) => {
 
 // Bundle analyzer component (development only)
 export const BundleAnalyzer = () => {
-  if (process.env.NODE_ENV !== 'development') {
-    return null
-  }
-
   const [bundleStats, setBundleStats] = useState(null)
 
   useEffect(() => {
@@ -237,6 +234,10 @@ export const BundleAnalyzer = () => {
     }
     setBundleStats(stats)
   }, [])
+
+  if (typeof process !== 'undefined' && process.env.NODE_ENV !== 'development') {
+    return null
+  }
 
   if (!bundleStats) return null
 
@@ -349,12 +350,12 @@ export const OptimizedImage = ({
 
 // Performance budget checker
 export const checkPerformanceBudget = () => {
-  if (typeof window === 'undefined' || process.env.NODE_ENV !== 'development') {
+  if (typeof window === 'undefined' || (typeof process !== 'undefined' && process.env.NODE_ENV !== 'development')) {
     return
   }
 
   // Check bundle size budget
-  const budgets = {
+  const _budgets = {
     javascript: 500 * 1024, // 500KB
     css: 100 * 1024, // 100KB
     images: 1 * 1024 * 1024, // 1MB

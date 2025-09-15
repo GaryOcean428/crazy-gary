@@ -181,7 +181,7 @@ class APIClient {
 
   // Cancel all pending requests
   cancelAllRequests() {
-    for (const [requestId, controller] of this.abortControllers) {
+    for (const [_requestId, controller] of this.abortControllers) {
       controller.abort()
     }
     this.abortControllers.clear()

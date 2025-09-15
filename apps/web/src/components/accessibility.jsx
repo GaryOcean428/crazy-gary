@@ -16,10 +16,10 @@ export const SkipToMain = () => (
 )
 
 // Screen reader only text
-export const ScreenReaderOnly = ({ children, as: Component = 'span' }) => (
-  <Component className="sr-only">
+export const ScreenReaderOnly = ({ children, as: _Component = 'span' }) => (
+  <_Component className="sr-only">
     {children}
-  </Component>
+  </_Component>
 )
 
 // Visually hidden but accessible to screen readers
@@ -89,25 +89,27 @@ export const FocusTrap = ({ children, active = true }) => {
 // Live region for announcing dynamic content changes
 export const LiveRegion = ({ 
   children, 
-  politeness = 'polite',
+  _politeness = 'polite',
   atomic = false,
   relevant = 'additions text'
-}) => (
-  <div
-    aria-live={politeness}
-    aria-atomic={atomic}
-    aria-relevant={relevant}
-    className="sr-only"
-  >
-    {children}
-  </div>
-)
+}) => {
+  return (
+    <div
+      aria-live={_politeness}
+      aria-atomic={atomic}
+      aria-relevant={relevant}
+      className="sr-only"
+    >
+      {children}
+    </div>
+  )
+}
 
 // Hook for managing announcements to screen readers
 export const useAnnouncements = () => {
   const [announcement, setAnnouncement] = useState('')
 
-  const announce = React.useCallback((message, politeness = 'polite') => {
+  const announce = React.useCallback((message, _politeness = 'polite') => {
     setAnnouncement('')
     setTimeout(() => {
       setAnnouncement(message)
@@ -216,7 +218,7 @@ export const AccessibleField = ({
   id,
   className = ''
 }) => {
-  const fieldId = id || React.useId()
+  const fieldId = id || `field-${Math.random().toString(36).substr(2, 9)}`
   const errorId = error ? `${fieldId}-error` : undefined
   const helpId = help ? `${fieldId}-help` : undefined
 
