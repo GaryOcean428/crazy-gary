@@ -49,7 +49,8 @@ class PerformanceMonitor:
                 'errors_total': self.error_count
             }
         except Exception as e:
-            return {'error': f'Failed to get system metrics: {str(e)}'}
+            logging.error("System metrics retrieval failed", exc_info=True)
+            return {'error': 'Failed to get system metrics. Please contact support.'}
     
     def record_request(self):
         """Record a request"""
