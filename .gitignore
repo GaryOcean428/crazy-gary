@@ -122,7 +122,7 @@ Thumbs.db
 Dockerfile*
 
 # Railway
-railway.toml
+# railway.toml removed - using railpack.json instead
 
 # Python
 __pycache__/

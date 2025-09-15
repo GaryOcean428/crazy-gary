@@ -127,32 +127,47 @@ class ConfigValidator:
         
         return True
 
-    def check_railway_toml(self) -> bool:
-        """Check if railway.toml exists and is valid"""
-        railway_toml_path = 'railway.toml'
+    def check_railpack_config(self) -> bool:
+        """Check if railpack.json exists and is valid"""
+        railpack_paths = ['railpack.json', 'apps/api/railpack.json', 'apps/web/railpack.json']
+        found_configs = []
         
-        if not os.path.exists(railway_toml_path):
-            self.warnings.append("railway.toml not found - Railway will use defaults")
+        for path in railpack_paths:
+            if os.path.exists(path):
+                found_configs.append(path)
+        
+        if not found_configs:
+            self.warnings.append("No railpack.json configurations found - Railway will use defaults")
             return True
             
-        try:
-            with open(railway_toml_path, 'r') as f:
-                content = f.read()
+        # Validate each found configuration
+        for config_path in found_configs:
+            try:
+                with open(config_path, 'r') as f:
+                    config = json.load(f)
+                    
+                # Check required sections
+                if 'deploy' in config:
+                    deploy = config['deploy']
+                    if 'startCommand' not in deploy:
+                        self.warnings.append(f"{config_path} missing deploy.startCommand")
+                    if 'healthCheckPath' not in deploy:
+                        self.warnings.append(f"{config_path} missing deploy.healthCheckPath")
+                else:
+                    self.warnings.append(f"{config_path} missing deploy section")
+                    
+                if 'build' in config:
+                    build = config['build']
+                    if 'provider' not in build:
+                        self.warnings.append(f"{config_path} missing build.provider")
+                        
+            except json.JSONDecodeError as e:
+                self.errors.append(f"Error parsing {config_path}: {e}")
+                return False
+            except Exception as e:
+                self.errors.append(f"Error reading {config_path}: {e}")
+                return False
                 
-            # Basic validation - check for required sections
-            if '[deploy]' not in content:
-                self.warnings.append("railway.toml missing [deploy] section")
-                
-            if 'startCommand' not in content:
-                self.warnings.append("railway.toml missing startCommand")
-                
-            if 'healthcheckPath' not in content:
-                self.warnings.append("railway.toml missing healthcheckPath")
-                
-        except Exception as e:
-            self.errors.append(f"Error reading railway.toml: {e}")
-            return False
-            
         return True
 
     def run_validation(self) -> Tuple[bool, Dict]:
@@ -166,7 +181,7 @@ class ConfigValidator:
             ("Environment Variables", self.validate_environment_variables),
             ("Database Configuration", self.validate_database_configuration),
             ("Security Configuration", self.validate_security_configuration),
-            ("Railway TOML", self.check_railway_toml)
+            ("Railpack Configuration", self.check_railpack_config)
         ]
         
         all_passed = True
