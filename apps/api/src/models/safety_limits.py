@@ -4,7 +4,7 @@ Implements safety controls, rate limiting, and resource management
 """
 import time
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from collections import defaultdict, deque
 from typing import Dict, List, Optional, Tuple
 from dataclasses import dataclass
@@ -115,7 +115,7 @@ class SafetyManager:
         with self.lock:
             # Check if user is blocked
             if user_id in self.blocked_users:
-                if datetime.utcnow() < self.blocked_users[user_id]:
+                if datetime.now(timezone.utc) < self.blocked_users[user_id]:
                     return False, "User is temporarily blocked due to safety violations"
                 else:
                     del self.blocked_users[user_id]
@@ -126,7 +126,7 @@ class SafetyManager:
                 return True, None
             
             rate_limit = user_limits.limits[limit_type]
-            now = datetime.utcnow()
+            now = datetime.now(timezone.utc)
             
             # Reset counter if window has passed
             if rate_limit.reset_time is None or now >= rate_limit.reset_time:
@@ -214,7 +214,7 @@ class SafetyManager:
     def block_user(self, user_id: int, duration_minutes: int = 60, reason: str = "Safety violation"):
         """Temporarily block a user"""
         with self.lock:
-            block_until = datetime.utcnow() + timedelta(minutes=duration_minutes)
+            block_until = datetime.now(timezone.utc) + timedelta(minutes=duration_minutes)
             self.blocked_users[user_id] = block_until
             logger.warning(f"User {user_id} blocked until {block_until}: {reason}")
     

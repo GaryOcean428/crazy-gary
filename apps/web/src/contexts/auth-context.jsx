@@ -10,11 +10,23 @@ export function AuthProvider({ children }) {
   const [token, setToken] = useState(null)
 
   useEffect(() => {
-    // Check for existing token on mount
+    // Check for existing token on mount or enable demo mode for UI development
     const savedToken = localStorage.getItem('auth_token')
+    const demoMode = localStorage.getItem('demo_mode')
+    
     if (savedToken) {
       setToken(savedToken)
       validateToken(savedToken)
+    } else if (demoMode === 'true') {
+      // Enable demo mode for UI development
+      setUser({
+        id: 'demo',
+        email: 'demo@crazy-gary.ai',
+        name: 'Demo User',
+        role: 'admin'
+      })
+      setToken('demo-token')
+      setLoading(false)
     } else {
       setLoading(false)
     }
@@ -57,6 +69,21 @@ export function AuthProvider({ children }) {
 
   const login = async (email, password) => {
     try {
+      // Check for demo credentials
+      if (email === 'demo@crazy-gary.ai' && password === 'demo123') {
+        const demoUser = {
+          id: 'demo',
+          email: 'demo@crazy-gary.ai',
+          name: 'Demo User',
+          role: 'admin'
+        }
+        setUser(demoUser)
+        setToken('demo-token')
+        localStorage.setItem('auth_token', 'demo-token')
+        localStorage.setItem('demo_mode', 'true')
+        return { success: true, user: demoUser }
+      }
+
       const response = await fetch('/api/auth/login', {
         method: 'POST',
         headers: {
@@ -71,6 +98,7 @@ export function AuthProvider({ children }) {
         setUser(data.user)
         setToken(data.token)
         localStorage.setItem('auth_token', data.token)
+        localStorage.removeItem('demo_mode')
         return { success: true }
       } else {
         return { success: false, error: data.error || 'Login failed' }

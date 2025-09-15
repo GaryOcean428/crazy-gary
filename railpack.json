@@ -1,0 +1,43 @@
+{
+  "version": "1",
+  "metadata": {
+    "name": "monkey-coder",
+    "description": "Advanced AI-powered coding assistant with React frontend and FastAPI backend"
+  },
+  "build": {
+    "provider": "python",
+    "steps": {
+      "install": {
+        "commands": [
+          "echo '🔧 Installing Python dependencies...'",
+          "pip install --upgrade pip",
+          "pip install -r requirements.txt",
+          "echo '✅ Python dependencies installed'"
+        ]
+      },
+      "build": {
+        "commands": [
+          "echo '🎨 Building frontend...'",
+          "./build_frontend.sh",
+          "echo '✅ Frontend build completed'",
+          "echo '📁 Verifying build output...'",
+          "ls -la apps/api/src/static/ || echo 'No static directory found'",
+          "echo '🔧 Build process completed'"
+        ]
+      }
+    }
+  },
+  "deploy": {
+    "startCommand": "python run_server.py",
+    "healthCheckPath": "/health",
+    "healthCheckTimeout": 300,
+    "restartPolicyType": "ON_FAILURE",
+    "restartPolicyMaxRetries": 3
+  },
+  "env": {
+    "NODE_ENV": "production",
+    "ENVIRONMENT": "production",
+    "SERVE_FRONTEND": "true",
+    "HOST": "0.0.0.0"
+  }
+}

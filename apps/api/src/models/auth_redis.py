@@ -6,7 +6,7 @@ import os
 import jwt
 import bcrypt
 import uuid
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from functools import wraps
 from flask import request, jsonify, current_app
 from src.models.user import User, db
@@ -42,8 +42,8 @@ class RedisAuthManager:
             'user_id': user_id,
             'email': email,
             'session_id': session_id,
-            'exp': datetime.utcnow() + timedelta(hours=self.token_expiry_hours),
-            'iat': datetime.utcnow()
+            'exp': datetime.now(timezone.utc) + timedelta(hours=self.token_expiry_hours),
+            'iat': datetime.now(timezone.utc)
         }
         
         token = jwt.encode(payload, self.secret_key, algorithm=self.algorithm)
@@ -68,8 +68,8 @@ class RedisAuthManager:
             'user_id': user.id,
             'email': user.email,
             'name': user.name,
-            'login_time': datetime.utcnow().isoformat(),
-            'last_activity': datetime.utcnow().isoformat(),
+            'login_time': datetime.now(timezone.utc).isoformat(),
+            'last_activity': datetime.now(timezone.utc).isoformat(),
             'is_active': True
         }
         
@@ -88,7 +88,7 @@ class RedisAuthManager:
         """Update last activity time for session"""
         session_data = self.get_session(session_id)
         if session_data:
-            session_data['last_activity'] = datetime.utcnow().isoformat()
+            session_data['last_activity'] = datetime.now(timezone.utc).isoformat()
             return redis_client.set_session(session_id, session_data, self.session_expiry_seconds)
         return False
     
@@ -117,7 +117,7 @@ class RedisAuthManager:
                 password_hash=hashed_password,
                 name=name or email.split('@')[0],
                 is_active=True,
-                created_at=datetime.utcnow()
+                created_at=datetime.now(timezone.utc)
             )
             
             db.session.add(user)
@@ -160,7 +160,7 @@ class RedisAuthManager:
                 return {'error': 'Invalid credentials', 'code': 'INVALID_CREDENTIALS'}
             
             # Update last login
-            user.last_login = datetime.utcnow()
+            user.last_login = datetime.now(timezone.utc)
             db.session.commit()
             
             # Create session and generate token

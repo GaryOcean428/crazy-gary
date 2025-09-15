@@ -1,6 +1,4 @@
-"use client"
-
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
 import { Toaster } from '@/components/ui/toaster'
 import { ThemeProvider } from '@/components/theme-provider'
@@ -21,9 +19,6 @@ import { ProtectedRoute } from '@/components/protected-route'
 import './App.css'
 
 function App() {
-  const [sidebarOpen, setSidebarOpen] = useState(true)
-  const [currentTask, setCurrentTask] = useState(null)
-
   return (
     <AuthProvider>
       <ThemeProvider defaultTheme="dark" storageKey="crazy-gary-theme">
@@ -74,7 +69,6 @@ function ProtectedApp() {
               path="/tasks" 
               element={
                 <TaskManager 
-                  currentTask={currentTask}
                   setCurrentTask={setCurrentTask}
                 />
               } 

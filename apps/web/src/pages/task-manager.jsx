@@ -36,7 +36,7 @@ import {
   Settings
 } from 'lucide-react'
 
-export function TaskManager({ currentTask, setCurrentTask }) {
+export function TaskManager({ setCurrentTask }) {
   const [tasks, setTasks] = useState([])
   const [newTaskOpen, setNewTaskOpen] = useState(false)
   const [newTask, setNewTask] = useState({
@@ -45,7 +45,6 @@ export function TaskManager({ currentTask, setCurrentTask }) {
     priority: 'medium',
     model: 'gpt-oss-120b'
   })
-  const [selectedTask, setSelectedTask] = useState(null)
   const { toast } = useToast()
 
   useEffect(() => {

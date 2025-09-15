@@ -4,7 +4,13 @@ Tests for Harmony message format, validation, and model integration
 """
 import pytest
 import json
+import sys
+import os
 from unittest.mock import Mock, patch, AsyncMock
+
+# Add parent directory to path for imports
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+
 from apps.api.src.models.harmony_client import HarmonyClient
 from apps.api.src.models.endpoint_manager import HuggingFaceEndpointManager
 

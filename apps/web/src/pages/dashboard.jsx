@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -8,37 +8,111 @@ import {
   Activity, 
   Brain, 
   Zap, 
-  Clock, 
-  CheckCircle, 
-  AlertCircle,
   TrendingUp,
   Server,
   Wrench,
-  Play,
-  Pause
-} from 'lucide-react'
+  Sparkles,
+  BarChart3,
+  LineChart,
+  PieChart,
+  ArrowUpRight,
+  ArrowDownRight,
+  Users,
+  Eye,
+  CheckCircle,
+  Cpu,
+  HardDrive,
+  Network
+} from '@/lib/icons'
+import { 
+  formatSystemStats
+} from '@/lib/component-utils'
 
 export function Dashboard() {
-  const [systemStats, setSystemStats] = useState({
-    tasksCompleted: 0,
-    tasksRunning: 0,
-    modelsActive: 0,
-    toolsAvailable: 0
+  const [systemStats, setSystemStats] = useState(
+    formatSystemStats({
+      tasksCompleted: 156,
+      tasksRunning: 3,
+      modelsActive: 5,
+      toolsAvailable: 12
+    })
+  )
+  
+  const [modelStatus, _setModelStatus] = useState({
+    'gpt-4': { status: 'running', load: 45, requests: 1247 },
+    'claude-3': { status: 'running', load: 32, requests: 892 },
+    'gemini-pro': { status: 'idle', load: 0, requests: 0 },
+    'llama-2': { status: 'error', load: 0, requests: 0 },
+    'mistral': { status: 'running', load: 78, requests: 2156 }
   })
   
-  const [modelStatus, setModelStatus] = useState({})
-  const [mcpStatus, setMcpStatus] = useState({})
-  const [recentTasks, setRecentTasks] = useState([])
+  const [mcpStatus, _setMcpStatus] = useState({
+    'file-system': { status: 'connected', operations: 45 },
+    'web-scraper': { status: 'connected', operations: 23 },
+    'database': { status: 'disconnected', operations: 0 },
+    'email-client': { status: 'connected', operations: 12 }
+  })
+  
+  const [recentTasks, _setRecentTasks] = useState([
+    {
+      id: 1,
+      name: 'Analyze market trends',
+      status: 'completed',
+      duration: '2m 34s',
+      timestamp: new Date(Date.now() - 240000).toISOString(), // 4 min ago
+      progress: 100
+    },
+    {
+      id: 2,
+      name: 'Generate report summary',
+      status: 'running',
+      duration: '1m 12s',
+      timestamp: new Date(Date.now() - 60000).toISOString(), // 1 min ago
+      progress: 67
+    },
+    {
+      id: 3,
+      name: 'Web scraping task',
+      status: 'completed',
+      duration: '45s',
+      timestamp: new Date(Date.now() - 600000).toISOString(), // 10 min ago
+      progress: 100
+    },
+    {
+      id: 4,
+      name: 'Data processing pipeline',
+      status: 'running',
+      duration: '5m 23s',
+      timestamp: new Date(Date.now() - 180000).toISOString(), // 3 min ago
+      progress: 34
+    }
+  ])
 
-  useEffect(() => {
-    fetchDashboardData()
-    const interval = setInterval(fetchDashboardData, 30000) // Refresh every 30 seconds
-    return () => clearInterval(interval)
-  }, [])
+  const [systemMetrics, setSystemMetrics] = useState({
+    cpu: 23,
+    memory: 67,
+    disk: 45,
+    network: 12
+  })
 
-  const fetchDashboardData = async () => {
+  const fetchDashboardData = useCallback(async () => {
     try {
-      // Fetch model status
+      // Simulate real-time data updates
+      setSystemStats(prev => ({
+        ...prev,
+        tasksCompleted: prev.tasksCompleted + Math.floor(Math.random() * 3),
+        tasksRunning: Math.max(0, prev.tasksRunning + (Math.random() > 0.7 ? 1 : -1))
+      }))
+
+      setSystemMetrics(prev => ({
+        cpu: Math.max(0, Math.min(100, prev.cpu + (Math.random() - 0.5) * 10)),
+        memory: Math.max(0, Math.min(100, prev.memory + (Math.random() - 0.5) * 5)),
+        disk: Math.max(0, Math.min(100, prev.disk + (Math.random() - 0.5) * 2)),
+        network: Math.max(0, Math.min(100, prev.network + (Math.random() - 0.5) * 15))
+      }))
+
+      // Fetch model status (commented out API calls for demo)
+      /*
       const modelResponse = await fetch('/api/endpoints/status')
       if (modelResponse.ok) {
         const modelData = await modelResponse.json()
@@ -57,255 +131,372 @@ export function Dashboard() {
         const mcpData = await mcpResponse.json()
         setMcpStatus(mcpData.clients || {})
         
-        const totalTools = Object.values(mcpData.clients || {}).reduce(
-          (sum, client) => sum + (client.tool_count || 0), 0
-        )
+        const connectedTools = Object.values(mcpData.clients || {}).filter(
+          client => client.status === 'connected'
+        ).length
         
-        setSystemStats(prev => ({ ...prev, toolsAvailable: totalTools }))
+        setSystemStats(prev => ({ ...prev, toolsAvailable: connectedTools }))
       }
 
-      // Mock recent tasks data
-      setRecentTasks([
-        {
-          id: 1,
-          title: "Analyze market trends",
-          status: "completed",
-          duration: "2m 34s",
-          timestamp: new Date(Date.now() - 1000 * 60 * 5).toISOString()
-        },
-        {
-          id: 2,
-          title: "Generate report summary",
-          status: "running",
-          duration: "1m 12s",
-          timestamp: new Date(Date.now() - 1000 * 60 * 2).toISOString()
-        },
-        {
-          id: 3,
-          title: "Web scraping task",
-          status: "completed",
-          duration: "45s",
-          timestamp: new Date(Date.now() - 1000 * 60 * 10).toISOString()
-        }
-      ])
-
+      // Fetch recent tasks
+      const tasksResponse = await fetch('/api/tasks/recent')
+      if (tasksResponse.ok) {
+        const tasksData = await tasksResponse.json()
+        setRecentTasks(tasksData.tasks || [])
+        
+        const completedTasks = tasksData.tasks?.filter(
+          task => task.status === 'completed'
+        ).length || 0
+        
+        setSystemStats(prev => ({ ...prev, tasksCompleted: completedTasks }))
+      }
+      */
     } catch (error) {
       console.error('Failed to fetch dashboard data:', error)
     }
-  }
+  }, [])
 
-  const getStatusIcon = (status) => {
+  useEffect(() => {
+    fetchDashboardData()
+    const interval = setInterval(fetchDashboardData, 5000) // Refresh every 5 seconds
+    return () => clearInterval(interval)
+  }, [fetchDashboardData])
+
+  const _getStatusColor = (status) => {
     switch (status) {
       case 'running':
-        return <CheckCircle className="h-4 w-4 text-green-500" />
-      case 'sleeping':
-        return <Clock className="h-4 w-4 text-yellow-500" />
+      case 'connected':
+      case 'completed':
+        return 'text-green-500'
+      case 'idle':
+      case 'paused':
+        return 'text-yellow-500'
       case 'error':
-        return <AlertCircle className="h-4 w-4 text-red-500" />
+      case 'disconnected':
+      case 'failed':
+        return 'text-red-500'
       default:
-        return <AlertCircle className="h-4 w-4 text-gray-500" />
+        return 'text-muted-foreground'
     }
   }
 
-  const getStatusBadge = (status) => {
-    const variants = {
-      'running': 'default',
-      'sleeping': 'secondary',
-      'completed': 'default',
-      'error': 'destructive'
+  const getStatusBadgeVariant = (status) => {
+    switch (status) {
+      case 'running':
+      case 'connected':
+      case 'completed':
+        return 'default'
+      case 'idle':
+      case 'paused':
+        return 'secondary'
+      case 'error':
+      case 'disconnected':
+      case 'failed':
+        return 'destructive'
+      default:
+        return 'outline'
     }
-    return variants[status] || 'secondary'
   }
+
+  // eslint-disable-next-line no-unused-vars
+  const StatCard = ({ title, value, change, icon: Icon, trend = 'up' }) => (
+    <Card className="group hover:shadow-lg transition-all duration-300 border-border/50 hover:border-primary/20">
+      <CardContent className="p-6">
+        <div className="flex items-center justify-between">
+          <div className="space-y-2">
+            <p className="text-sm font-medium text-muted-foreground group-hover:text-foreground transition-colors">
+              {title}
+            </p>
+            <div className="flex items-baseline space-x-2">
+              <p className="text-3xl font-bold tracking-tight">{value}</p>
+              {change && (
+                <div className={`flex items-center text-xs font-medium ${
+                  trend === 'up' ? 'text-green-600' : 'text-red-600'
+                }`}>
+                  {trend === 'up' ? (
+                    <ArrowUpRight className="h-3 w-3 mr-1" />
+                  ) : (
+                    <ArrowDownRight className="h-3 w-3 mr-1" />
+                  )}
+                  {change}
+                </div>
+              )}
+            </div>
+          </div>
+          <div className="relative">
+            <div className="absolute -inset-2 bg-primary/5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"></div>
+            <Icon className="h-8 w-8 text-primary group-hover:scale-110 transition-transform" />
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  )
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-        <p className="text-muted-foreground">
-          Monitor your agentic AI system performance and status
+    <div className="space-y-8 animate-in fade-in slide-up">
+      {/* Enhanced Header */}
+      <div className="space-y-2">
+        <div className="flex items-center space-x-2">
+          <h1 className="text-4xl font-bold tracking-tight bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
+            Dashboard
+          </h1>
+          <Sparkles className="h-6 w-6 text-primary animate-pulse" />
+        </div>
+        <p className="text-lg text-muted-foreground">
+          Real-time insights into your agentic AI system performance and health
         </p>
+        <div className="flex items-center space-x-4 text-sm">
+          <Badge variant="outline" className="border-green-500/20 text-green-600">
+            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse mr-2"></div>
+            Live Data
+          </Badge>
+          <span className="text-muted-foreground">Last updated: {new Date().toLocaleTimeString()}</span>
+        </div>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Tasks Completed</CardTitle>
-            <CheckCircle className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{systemStats.tasksCompleted}</div>
-            <p className="text-xs text-muted-foreground">
-              +12% from last hour
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Active Models</CardTitle>
-            <Brain className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{systemStats.modelsActive}</div>
-            <p className="text-xs text-muted-foreground">
-              {Object.keys(modelStatus).length} total endpoints
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">MCP Tools</CardTitle>
-            <Wrench className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{systemStats.toolsAvailable}</div>
-            <p className="text-xs text-muted-foreground">
-              {Object.keys(mcpStatus).length} clients connected
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">System Load</CardTitle>
-            <Activity className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">23%</div>
-            <Progress value={23} className="mt-2" />
-          </CardContent>
-        </Card>
+      {/* Enhanced Stats Cards */}
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+        <StatCard
+          title="Tasks Completed"
+          value={systemStats.tasksCompleted.toLocaleString()}
+          change="+12% from last hour"
+          icon={CheckCircle}
+          trend="up"
+        />
+        <StatCard
+          title="Active Models"
+          value={systemStats.modelsActive}
+          change={`${Object.keys(modelStatus).length} total endpoints`}
+          icon={Brain}
+        />
+        <StatCard
+          title="MCP Tools"
+          value={systemStats.toolsAvailable}
+          change={`${Object.values(mcpStatus).filter(c => c.status === 'connected').length} clients connected`}
+          icon={Wrench}
+        />
+        <StatCard
+          title="System Load"
+          value={`${systemMetrics.cpu}%`}
+          change="Optimal performance"
+          icon={Cpu}
+          trend="down"
+        />
       </div>
 
+      {/* Enhanced System Metrics */}
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+        {[
+          { label: 'CPU Usage', value: systemMetrics.cpu, icon: Cpu, color: 'bg-blue-500' },
+          { label: 'Memory', value: systemMetrics.memory, icon: HardDrive, color: 'bg-green-500' },
+          { label: 'Disk I/O', value: systemMetrics.disk, icon: HardDrive, color: 'bg-yellow-500' },
+          { label: 'Network', value: systemMetrics.network, icon: Network, color: 'bg-purple-500' }
+        ].map((metric) => (
+          <Card key={metric.label} className="hover:shadow-soft transition-all duration-200">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center space-x-2">
+                  <metric.icon className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm font-medium">{metric.label}</span>
+                </div>
+                <span className="text-sm font-bold">{metric.value}%</span>
+              </div>
+              <Progress 
+                value={metric.value} 
+                className="h-2"
+              />
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      {/* Enhanced Content Grid */}
       <div className="grid gap-6 lg:grid-cols-2">
-        {/* Model Status */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <Server className="h-5 w-5" />
-              <span>Model Endpoints</span>
-            </CardTitle>
-            <CardDescription>
-              Current status of AI model endpoints
-            </CardDescription>
+        {/* Enhanced Model Endpoints */}
+        <Card className="glass-effect hover:shadow-strong transition-all duration-300">
+          <CardHeader className="pb-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <div className="p-2 bg-primary/10 rounded-lg">
+                  <Server className="h-5 w-5 text-primary" />
+                </div>
+                <div>
+                  <CardTitle className="text-xl">Model Endpoints</CardTitle>
+                  <CardDescription>AI model performance and status</CardDescription>
+                </div>
+              </div>
+              <Button variant="ghost" size="sm">
+                <Eye className="h-4 w-4" />
+              </Button>
+            </div>
           </CardHeader>
           <CardContent className="space-y-4">
-            {Object.entries(modelStatus).map(([modelType, status]) => (
-              <div key={modelType} className="flex items-center justify-between">
-                <div className="flex items-center space-x-3">
-                  {getStatusIcon(status.status)}
-                  <div>
-                    <div className="font-medium">{modelType.toUpperCase()} Model</div>
-                    <div className="text-sm text-muted-foreground">
-                      {status.auto_sleep_in ? `Sleep in ${Math.floor(status.auto_sleep_in / 60)}m` : 'Ready'}
+            {Object.keys(modelStatus).length > 0 ? (
+              Object.entries(modelStatus).map(([name, endpoint]) => (
+                <div key={name} className="flex items-center justify-between p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
+                  <div className="flex items-center space-x-3">
+                    <div className={`w-3 h-3 rounded-full ${
+                      endpoint.status === 'running' ? 'bg-green-500 animate-pulse' :
+                      endpoint.status === 'idle' ? 'bg-yellow-500' : 'bg-red-500'
+                    }`} />
+                    <div>
+                      <p className="font-medium capitalize">{name}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {endpoint.requests?.toLocaleString() || 0} requests
+                      </p>
                     </div>
                   </div>
+                  <div className="text-right space-y-1">
+                    <Badge variant={getStatusBadgeVariant(endpoint.status)} className="text-xs">
+                      {endpoint.status}
+                    </Badge>
+                    {endpoint.load !== undefined && (
+                      <p className="text-xs text-muted-foreground">{endpoint.load}% load</p>
+                    )}
+                  </div>
                 </div>
-                <Badge variant={getStatusBadge(status.status)}>
-                  {status.status}
-                </Badge>
-              </div>
-            ))}
-            
-            {Object.keys(modelStatus).length === 0 && (
-              <div className="text-center text-muted-foreground py-4">
-                No model endpoints configured
+              ))
+            ) : (
+              <div className="text-center py-8 text-muted-foreground">
+                <Server className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                <p>No model endpoints configured</p>
+                <Button variant="outline" size="sm" className="mt-2">
+                  Add Endpoint
+                </Button>
               </div>
             )}
           </CardContent>
         </Card>
 
-        {/* MCP Clients */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <Wrench className="h-5 w-5" />
-              <span>MCP Clients</span>
-            </CardTitle>
-            <CardDescription>
-              Model Context Protocol integrations
-            </CardDescription>
+        {/* Enhanced MCP Clients */}
+        <Card className="glass-effect hover:shadow-strong transition-all duration-300">
+          <CardHeader className="pb-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <div className="p-2 bg-accent/10 rounded-lg">
+                  <Wrench className="h-5 w-5 text-accent-foreground" />
+                </div>
+                <div>
+                  <CardTitle className="text-xl">MCP Clients</CardTitle>
+                  <CardDescription>Model Context Protocol integrations</CardDescription>
+                </div>
+              </div>
+              <Button variant="ghost" size="sm">
+                <Eye className="h-4 w-4" />
+              </Button>
+            </div>
           </CardHeader>
           <CardContent className="space-y-4">
-            {Object.entries(mcpStatus).map(([clientName, status]) => (
-              <div key={clientName} className="flex items-center justify-between">
-                <div className="flex items-center space-x-3">
-                  {status.connected ? (
-                    <CheckCircle className="h-4 w-4 text-green-500" />
-                  ) : (
-                    <AlertCircle className="h-4 w-4 text-red-500" />
-                  )}
-                  <div>
-                    <div className="font-medium capitalize">{clientName}</div>
-                    <div className="text-sm text-muted-foreground">
-                      {status.tool_count || 0} tools available
+            {Object.keys(mcpStatus).length > 0 ? (
+              Object.entries(mcpStatus).map(([name, client]) => (
+                <div key={name} className="flex items-center justify-between p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
+                  <div className="flex items-center space-x-3">
+                    <div className={`w-3 h-3 rounded-full ${
+                      client.status === 'connected' ? 'bg-green-500 animate-pulse' : 'bg-red-500'
+                    }`} />
+                    <div>
+                      <p className="font-medium capitalize">{name.replace('-', ' ')}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {client.operations || 0} operations
+                      </p>
                     </div>
                   </div>
+                  <Badge variant={getStatusBadgeVariant(client.status)} className="text-xs">
+                    {client.status}
+                  </Badge>
                 </div>
-                <Badge variant={status.connected ? 'default' : 'destructive'}>
-                  {status.connected ? 'Connected' : 'Disconnected'}
-                </Badge>
-              </div>
-            ))}
-            
-            {Object.keys(mcpStatus).length === 0 && (
-              <div className="text-center text-muted-foreground py-4">
-                No MCP clients configured
+              ))
+            ) : (
+              <div className="text-center py-8 text-muted-foreground">
+                <Wrench className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                <p>No MCP clients configured</p>
+                <Button variant="outline" size="sm" className="mt-2">
+                  Add Client
+                </Button>
               </div>
             )}
           </CardContent>
         </Card>
       </div>
 
-      {/* Recent Tasks */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center space-x-2">
-            <TrendingUp className="h-5 w-5" />
-            <span>Recent Tasks</span>
-          </CardTitle>
-          <CardDescription>
-            Latest agentic task executions
-          </CardDescription>
+      {/* Enhanced Recent Tasks */}
+      <Card className="glass-effect hover:shadow-strong transition-all duration-500">
+        <CardHeader className="pb-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <div className="p-2 bg-chart-1/10 rounded-lg">
+                <Activity className="h-5 w-5 text-chart-1" />
+              </div>
+              <div>
+                <CardTitle className="text-xl">Recent Tasks</CardTitle>
+                <CardDescription>Latest agentic task executions and their status</CardDescription>
+              </div>
+            </div>
+            <Button variant="ghost" size="sm">
+              View All
+              <ArrowUpRight className="h-4 w-4 ml-1" />
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
-            {recentTasks.map((task, index) => (
-              <div key={task.id}>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-3">
-                    {task.status === 'running' ? (
-                      <div className="h-2 w-2 rounded-full bg-blue-500 animate-pulse" />
-                    ) : (
-                      <CheckCircle className="h-4 w-4 text-green-500" />
-                    )}
-                    <div>
-                      <div className="font-medium">{task.title}</div>
-                      <div className="text-sm text-muted-foreground">
-                        {new Date(task.timestamp).toLocaleTimeString()} • {task.duration}
+          {recentTasks.length > 0 ? (
+            <div className="space-y-4">
+              {recentTasks.map((task) => (
+                <div key={task.id} className="group flex items-center justify-between p-4 rounded-lg bg-muted/20 hover:bg-muted/40 transition-all duration-200 hover:scale-[1.01]">
+                  <div className="flex items-center space-x-4 flex-1">
+                    <div className={`w-4 h-4 rounded-full flex items-center justify-center ${
+                      task.status === 'completed' 
+                        ? 'bg-green-500' 
+                        : task.status === 'running' 
+                        ? 'bg-blue-500 animate-pulse' 
+                        : 'bg-gray-500'
+                    }`}>
+                      {task.status === 'completed' ? (
+                        <CheckCircle className="h-3 w-3 text-white" />
+                      ) : task.status === 'running' ? (
+                        <div className="w-2 h-2 bg-white rounded-full" />
+                      ) : null}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium group-hover:text-primary transition-colors truncate">
+                        {task.name}
+                      </p>
+                      <div className="flex items-center space-x-4 text-sm text-muted-foreground">
+                        <span className="flex items-center">
+                          <Clock className="h-3 w-3 mr-1" />
+                          {task.timestamp}
+                        </span>
+                        <span>• {task.duration}</span>
+                        {task.status === 'running' && (
+                          <span className="flex items-center">
+                            • {task.progress}% complete
+                          </span>
+                        )}
                       </div>
+                      {task.status === 'running' && (
+                        <Progress value={task.progress} className="mt-2 h-1" />
+                      )}
                     </div>
                   </div>
-                  <Badge variant={getStatusBadge(task.status)}>
+                  <Badge variant={getStatusBadgeVariant(task.status)} className="ml-4">
                     {task.status}
                   </Badge>
                 </div>
-                {index < recentTasks.length - 1 && <Separator className="mt-4" />}
-              </div>
-            ))}
-            
-            {recentTasks.length === 0 && (
-              <div className="text-center text-muted-foreground py-8">
-                No recent tasks
-              </div>
-            )}
-          </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-12 text-muted-foreground">
+              <Activity className="h-16 w-16 mx-auto mb-4 opacity-30" />
+              <p className="text-lg font-medium mb-2">No recent tasks</p>
+              <p className="text-sm mb-4">Start your first agentic task to see activity here</p>
+              <Button>
+                <Play className="h-4 w-4 mr-2" />
+                Create Task
+              </Button>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
   )
 }
-

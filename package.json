@@ -11,15 +11,31 @@
     "dev": "turbo run dev",
     "build": "turbo run build",
     "test": "turbo run test",
+    "test:watch": "turbo run test:watch",
+    "test:coverage": "turbo run test:coverage",
     "lint": "turbo run lint",
+    "lint:fix": "turbo run lint:fix",
     "type-check": "turbo run type-check",
-    "clean": "turbo run clean"
+    "clean": "turbo run clean",
+    "setup": "./scripts/setup-dev.sh",
+    "performance": "./scripts/performance-monitor.sh",
+    "security": "./scripts/security-setup.sh",
+    "audit": "npm audit && python -m safety check",
+    "audit:fix": "npm audit fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "pre-commit": "npm run lint && npm run type-check && npm run build",
+    "ci": "npm run lint && npm run type-check && npm run build && npm run test",
+    "analyze": "npm run build && npm run performance",
+    "validate": "npm run lint && npm run type-check && npm run test:coverage && npm run audit"
   },
   "devDependencies": {
     "turbo": "^1.10.0",
     "@types/node": "^20.0.0",
     "typescript": "^5.0.0",
     "eslint": "^8.0.0",
+    "@typescript-eslint/eslint-plugin": "^6.0.0",
+    "@typescript-eslint/parser": "^6.0.0",
     "prettier": "^3.0.0"
   },
   "engines": {

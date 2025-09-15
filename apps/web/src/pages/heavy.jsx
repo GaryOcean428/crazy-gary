@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -71,7 +71,7 @@ export function Heavy() {
     }
   }
 
-  const pollProgress = async () => {
+  const pollProgress = useCallback(async () => {
     if (!isExecuting) return
 
     try {
@@ -88,7 +88,7 @@ export function Heavy() {
     } catch (error) {
       console.error('Error polling progress:', error)
     }
-  }
+  }, [isExecuting])
 
   const executeHeavyTask = async () => {
     if (!query.trim()) {
@@ -184,7 +184,7 @@ export function Heavy() {
     return () => {
       if (interval) clearInterval(interval)
     }
-  }, [isExecuting])
+  }, [isExecuting, pollProgress])
 
   const getAgentStatusIcon = (status) => {
     switch (status) {

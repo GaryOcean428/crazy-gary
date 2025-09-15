@@ -211,7 +211,7 @@ def get_system_stats():
         logger.error(f"Error getting stats: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
-@agent_bp.route('/health', methods=['GET'])
+@agent_bp.route('/agent/health', methods=['GET'])
 def agent_health():
     """Health check for the agent system"""
     try:

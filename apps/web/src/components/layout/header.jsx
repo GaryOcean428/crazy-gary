@@ -24,7 +24,7 @@ import {
 } from 'lucide-react'
 
 export function Header({ sidebarOpen, setSidebarOpen, currentTask }) {
-  const { theme, setTheme } = useTheme()
+  const { setTheme } = useTheme()
   const [systemStatus, setSystemStatus] = useState('online')
   const [modelStatus, setModelStatus] = useState('checking')
 
@@ -38,7 +38,7 @@ export function Header({ sidebarOpen, setSidebarOpen, currentTask }) {
         } else {
           setSystemStatus('degraded')
         }
-      } catch (error) {
+      } catch {
         setSystemStatus('offline')
       }
     }
@@ -56,7 +56,7 @@ export function Header({ sidebarOpen, setSidebarOpen, currentTask }) {
         } else {
           setModelStatus('error')
         }
-      } catch (error) {
+      } catch {
         setModelStatus('error')
       }
     }
