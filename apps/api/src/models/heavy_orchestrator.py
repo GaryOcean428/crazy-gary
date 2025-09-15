@@ -54,7 +54,16 @@ class HeavyOrchestrator:
     def __init__(self, num_agents: int = 4, task_timeout: int = 300):
         self.num_agents = num_agents
         self.task_timeout = task_timeout
-        self.harmony_client = HarmonyClient()
+        
+        # Initialize harmony client with graceful degradation
+        try:
+            self.harmony_client = HarmonyClient()
+            if not self.harmony_client.is_available():
+                print("⚠️ HarmonyClient initialized but not available - some features will be disabled")
+        except Exception as e:
+            print(f"❌ Failed to initialize HarmonyClient: {e}")
+            self.harmony_client = None
+            
         self.mcp_orchestrator = MCPOrchestrator()
         
         # Progress tracking
@@ -114,7 +123,12 @@ Simply provide the final synthesized answer directly as your response.
                 }
             ]
             
-            response = await self.harmony_client.generate_response(messages, "20b")
+            if self.harmony_client and self.harmony_client.is_available():
+                response = await self.harmony_client.generate_response(messages, "20b")
+            else:
+                # Provide a simple fallback when harmony client is not available
+                print("⚠️ HarmonyClient not available, using simple question generation fallback")
+                response = None
             
             if response and "choices" in response:
                 content = response["choices"][0]["message"]["content"]
@@ -181,24 +195,32 @@ Simply provide the final synthesized answer directly as your response.
             ]
             
             # Use Harmony client to generate response
-            response = await self.harmony_client.generate_response(messages, "20b")
+            if self.harmony_client and self.harmony_client.is_available():
+                response = await self.harmony_client.generate_response(messages, "20b")
+            else:
+                print("⚠️ HarmonyClient not available, using simple response fallback")
+                response = None
             
             if response and "choices" in response:
                 agent_task.result = response["choices"][0]["message"]["content"]
                 agent_task.status = AgentStatus.COMPLETED
                 agent_task.end_time = time.time()
                 agent_task.execution_time = agent_task.end_time - agent_task.start_time
-                
-                self.update_agent_progress(agent_task.agent_id, AgentStatus.COMPLETED, agent_task.result)
-                
-                # Log performance
-                observability_manager.log_performance(
-                    f"agent_{agent_task.agent_id}_execution",
-                    agent_task.execution_time * 1000,
-                    {"question_length": len(agent_task.question)}
-                )
             else:
-                raise Exception("No response from Harmony client")
+                # Simple fallback response when AI is not available
+                agent_task.result = f"Analysis for: {agent_task.question[:100]}... [AI model unavailable - using simple response]"
+                agent_task.status = AgentStatus.COMPLETED
+                agent_task.end_time = time.time()
+                agent_task.execution_time = agent_task.end_time - agent_task.start_time
+                
+            self.update_agent_progress(agent_task.agent_id, AgentStatus.COMPLETED, agent_task.result)
+            
+            # Log performance
+            observability_manager.log_performance(
+                f"agent_{agent_task.agent_id}_execution",
+                agent_task.execution_time * 1000,
+                {"question_length": len(agent_task.question)}
+            )
             
         except asyncio.TimeoutError:
             agent_task.status = AgentStatus.TIMEOUT
@@ -282,7 +304,11 @@ Simply provide the final synthesized answer directly as your response.
                 }
             ]
             
-            response = await self.harmony_client.generate_response(messages, "120b")  # Use larger model for synthesis
+            if self.harmony_client and self.harmony_client.is_available():
+                response = await self.harmony_client.generate_response(messages, "120b")  # Use larger model for synthesis
+            else:
+                print("⚠️ HarmonyClient not available, using simple synthesis fallback")
+                response = None
             
             if response and "choices" in response:
                 return response["choices"][0]["message"]["content"]
