@@ -4,7 +4,13 @@ Tests for user registration, login, and JWT token management
 """
 import pytest
 import json
+import sys
+import os
 from datetime import datetime, timedelta
+
+# Add parent directory to path for imports
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+
 from apps.api.src.main import app
 from apps.api.src.models.user import db, User
 from apps.api.src.models.auth import auth_manager

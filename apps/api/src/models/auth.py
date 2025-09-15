@@ -5,7 +5,7 @@ JWT-based authentication with user registration and login
 import os
 import jwt
 import bcrypt
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from functools import wraps
 from flask import request, jsonify, current_app
 from src.models.user import User, db
@@ -34,8 +34,8 @@ class AuthManager:
         payload = {
             'user_id': user_id,
             'email': email,
-            'exp': datetime.utcnow() + timedelta(hours=self.token_expiry_hours),
-            'iat': datetime.utcnow()
+            'exp': datetime.now(timezone.utc) + timedelta(hours=self.token_expiry_hours),
+            'iat': datetime.now(timezone.utc)
         }
         
         token = jwt.encode(payload, self.secret_key, algorithm=self.algorithm)

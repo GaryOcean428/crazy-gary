@@ -86,6 +86,12 @@ jobs:
         pip install -r requirements.txt
         
     - name: Run Python tests
+      env:
+        HUGGINGFACE_API_KEY: "test-key"
+        OPENAI_API_KEY: "test-key"
+        OPENROUTER_API_KEY: "test-key"
+        DATABASE_URL: "sqlite:///:memory:"
+        JWT_SECRET_KEY: "test-secret-key"
       run: |
         cd tests
         python -m pytest -v --cov=../apps/api/src --cov-report=xml

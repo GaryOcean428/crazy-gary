@@ -159,7 +159,7 @@ export function Dashboard() {
     }
   }
 
-  const getStatusColor = (status) => {
+  const _getStatusColor = (status) => {
     switch (status) {
       case 'running':
       case 'connected':
