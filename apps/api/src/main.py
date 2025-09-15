@@ -4,6 +4,13 @@ import time
 # DON'T CHANGE THIS !!!
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
+# Setup frontend before importing anything else
+try:
+    from setup_frontend import setup_frontend
+    setup_frontend()
+except Exception as e:
+    print(f"⚠️ Frontend setup failed: {e}")
+
 from flask import Flask, send_from_directory
 from flask_cors import CORS
 from flask_socketio import SocketIO
@@ -157,21 +164,53 @@ def readiness_check():
 def liveness_check():
     return {'status': 'alive'}
 
-@app.route('/', defaults={'path': ''})
-@app.route('/<path:path>')
-def serve(path):
+# Serve static assets
+@app.route('/assets/<path:filename>')
+def serve_assets(filename):
     static_folder_path = app.static_folder
-    if static_folder_path is None:
-            return "Static folder not configured", 404
+    if static_folder_path:
+        assets_path = os.path.join(static_folder_path, 'assets')
+        if os.path.exists(os.path.join(assets_path, filename)):
+            return send_from_directory(assets_path, filename)
+    return "Asset not found", 404
 
-    if path != "" and os.path.exists(os.path.join(static_folder_path, path)):
-        return send_from_directory(static_folder_path, path)
-    else:
+# Serve favicon
+@app.route('/favicon.ico')
+def serve_favicon():
+    static_folder_path = app.static_folder
+    if static_folder_path:
+        favicon_path = os.path.join(static_folder_path, 'favicon.ico')
+        if os.path.exists(favicon_path):
+            return send_from_directory(static_folder_path, 'favicon.ico')
+    return "Favicon not found", 404
+
+# Serve the frontend for all non-API routes
+@app.route('/')
+@app.route('/<path:path>')
+def serve(path=''):
+    # Don't intercept API routes - let them be handled by blueprints
+    if path.startswith('api/') or path.startswith('health') or path.startswith('docs'):
+        return None  # This will let Flask continue to other routes
+    
+    # For all other routes (SPA routing), serve index.html
+    static_folder_path = app.static_folder
+    if static_folder_path:
         index_path = os.path.join(static_folder_path, 'index.html')
         if os.path.exists(index_path):
             return send_from_directory(static_folder_path, 'index.html')
-        else:
-            return "index.html not found", 404
+    
+    # Fallback API response if no frontend is available
+    return {
+        "service": "Monkey Coder API",
+        "version": "1.0.0", 
+        "status": "running",
+        "message": "Frontend not available - API only mode",
+        "frontend_build_missing": True,
+        "endpoints": {
+            "health": "/health",
+            "api_health": "/api/health"
+        }
+    }
 
 
 # Initialize middleware
