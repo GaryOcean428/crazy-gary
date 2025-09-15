@@ -1,0 +1,193 @@
+---
+# GitHub Labels Configuration for Crazy-Gary Roadmap
+# This file defines the labels used for issue and epic tracking
+
+# Quarter Labels
+- name: "q1"
+  color: "ff6b6b"
+  description: "Q1 - Foundations & Reliability"
+
+- name: "q2"
+  color: "4ecdc4"
+  description: "Q2 - Intelligence & Advanced Features"
+
+- name: "q3"
+  color: "45b7d1"
+  description: "Q3 - Growth, Adoption & Monetization"
+
+# Epic and Issue Type Labels
+- name: "epic"
+  color: "8b5cf6"
+  description: "Large feature or initiative spanning multiple issues"
+
+- name: "enhancement"
+  color: "a2eeef"
+  description: "New feature or request"
+
+- name: "bug"
+  color: "d73a49"
+  description: "Something isn't working"
+
+# Priority Labels
+- name: "critical"
+  color: "b60205"
+  description: "Critical priority - blocking deployment or major functionality"
+
+- name: "high-priority"
+  color: "d93f0b"
+  description: "High priority - important for milestone completion"
+
+- name: "medium-priority"
+  color: "fbca04"
+  description: "Medium priority - should be completed in quarter"
+
+- name: "low-priority"
+  color: "0e8a16"
+  description: "Low priority - nice to have"
+
+# Component Labels
+- name: "frontend"
+  color: "ff7c7c"
+  description: "React frontend (apps/web)"
+
+- name: "backend"
+  color: "ffb347"
+  description: "Flask API backend (apps/api)"
+
+- name: "mcp"
+  color: "87ceeb"
+  description: "MCP integration and tools"
+
+- name: "heavy-mode"
+  color: "dda0dd"
+  description: "Heavy mode multi-agent orchestration"
+
+- name: "authentication"
+  color: "f0e68c"
+  description: "Authentication and authorization"
+
+- name: "deployment"
+  color: "98fb98"
+  description: "Railway deployment and infrastructure"
+
+- name: "database"
+  color: "ffd700"
+  description: "Database related changes"
+
+# Feature Category Labels
+- name: "architecture"
+  color: "6a5acd"
+  description: "Architectural changes and improvements"
+
+- name: "ui-ux"
+  color: "ff69b4"
+  description: "User interface and experience improvements"
+
+- name: "security"
+  color: "dc143c"
+  description: "Security enhancements and fixes"
+
+- name: "performance"
+  color: "32cd32"
+  description: "Performance optimizations"
+
+- name: "testing"
+  color: "20b2aa"
+  description: "Testing infrastructure and improvements"
+
+- name: "documentation"
+  color: "4169e1"
+  description: "Documentation updates and improvements"
+
+- name: "accessibility"
+  color: "9370db"
+  description: "Accessibility improvements"
+
+- name: "monitoring"
+  color: "ff8c00"
+  description: "Monitoring, logging, and observability"
+
+- name: "ci-cd"
+  color: "1e90ff"
+  description: "Continuous integration and deployment"
+
+- name: "devex"
+  color: "00ced1"
+  description: "Developer experience improvements"
+
+# Special Labels
+- name: "needs-triage"
+  color: "fef2c0"
+  description: "Needs triage and prioritization"
+
+- name: "blocked"
+  color: "b60205"
+  description: "Blocked by dependencies or external factors"
+
+- name: "in-progress"
+  color: "fbca04"
+  description: "Currently being worked on"
+
+- name: "ready-for-review"
+  color: "0e8a16"
+  description: "Ready for code review"
+
+- name: "breaking-change"
+  color: "d93f0b"
+  description: "Introduces breaking changes"
+
+# Monetization and Growth Labels
+- name: "monetization"
+  color: "ffd700"
+  description: "Revenue generation features"
+
+- name: "growth"
+  color: "32cd32"
+  description: "Features that drive user adoption"
+
+- name: "engagement"
+  color: "ff69b4"
+  description: "User engagement features"
+
+- name: "analytics"
+  color: "4169e1"
+  description: "Analytics and metrics"
+
+# AI and Intelligence Labels
+- name: "ai"
+  color: "9370db"
+  description: "AI and machine learning features"
+
+- name: "orchestration"
+  color: "8b5cf6"
+  description: "Agent orchestration and coordination"
+
+- name: "automation"
+  color: "20b2aa"
+  description: "Automation features"
+
+# Integration Labels
+- name: "integration"
+  color: "87ceeb"
+  description: "External service integrations"
+
+- name: "api"
+  color: "ff8c00"
+  description: "API development and improvements"
+
+- name: "webhook"
+  color: "1e90ff"
+  description: "Webhook functionality"
+
+# Infrastructure Labels
+- name: "infrastructure"
+  color: "696969"
+  description: "Infrastructure and DevOps"
+
+- name: "scaling"
+  color: "32cd32"
+  description: "Scaling and performance under load"
+
+- name: "reliability"
+  color: "4169e1"
+  description: "System reliability and stability"
