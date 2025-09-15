@@ -6,7 +6,7 @@ import time
 import logging
 import psutil
 import threading
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from collections import defaultdict, deque
 from typing import Dict, List, Optional, Any
 from dataclasses import dataclass, asdict
@@ -105,7 +105,7 @@ class ObservabilityManager:
                 name=name,
                 type=metric_type,
                 value=value,
-                timestamp=datetime.utcnow(),
+                timestamp=datetime.now(timezone.utc),
                 labels=labels
             )
             self.metrics[name].append(metric)
@@ -128,7 +128,7 @@ class ObservabilityManager:
         """Log an HTTP request"""
         with self.lock:
             log_entry = {
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
                 "method": method,
                 "path": path,
                 "status_code": status_code,
@@ -145,7 +145,7 @@ class ObservabilityManager:
         """Log an error"""
         with self.lock:
             error_entry = {
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
                 "error_type": error_type,
                 "message": message,
                 "stack_trace": stack_trace,
@@ -163,7 +163,7 @@ class ObservabilityManager:
         """Log performance data"""
         with self.lock:
             perf_entry = {
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
                 "operation": operation,
                 "duration_ms": duration_ms,
                 "metadata": metadata or {}
@@ -195,7 +195,7 @@ class ObservabilityManager:
                     name=name,
                     status=status,
                     message=message,
-                    timestamp=datetime.utcnow(),
+                    timestamp=datetime.now(timezone.utc),
                     response_time_ms=duration_ms
                 )
                 
@@ -208,7 +208,7 @@ class ObservabilityManager:
                     name=name,
                     status=HealthStatus.UNHEALTHY,
                     message=f"Health check failed: {str(e)}",
-                    timestamp=datetime.utcnow(),
+                    timestamp=datetime.now(timezone.utc),
                     response_time_ms=duration_ms
                 )
                 
@@ -242,7 +242,7 @@ class ObservabilityManager:
             
             return {
                 "status": overall_status.value,
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
                 "system": {
                     "cpu_percent": cpu_percent,
                     "memory_percent": memory.percent,
@@ -289,7 +289,7 @@ class ObservabilityManager:
     
     def get_dashboard_data(self) -> Dict[str, Any]:
         """Get comprehensive dashboard data"""
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         hour_ago = now - timedelta(hours=1)
         
         with self.lock:
