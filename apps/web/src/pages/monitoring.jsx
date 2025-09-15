@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -30,7 +30,7 @@ export function Monitoring() {
   const [refreshing, setRefreshing] = useState(false)
   const { toast } = useToast()
 
-  const fetchDashboardData = async () => {
+  const fetchDashboardData = useCallback(async () => {
     try {
       const response = await fetch('/api/monitoring/dashboard', {
         headers: {
@@ -52,9 +52,9 @@ export function Monitoring() {
         variant: "destructive"
       })
     }
-  }
+  }, [toast])
 
-  const fetchUserLimits = async () => {
+  const fetchUserLimits = useCallback(async () => {
     try {
       const response = await fetch('/api/monitoring/limits/user', {
         headers: {
@@ -69,13 +69,13 @@ export function Monitoring() {
     } catch (error) {
       console.error('Error fetching user limits:', error)
     }
-  }
+  }, [])
 
-  const refreshData = async () => {
+  const refreshData = useCallback(async () => {
     setRefreshing(true)
     await Promise.all([fetchDashboardData(), fetchUserLimits()])
     setRefreshing(false)
-  }
+  }, [fetchDashboardData, fetchUserLimits])
 
   useEffect(() => {
     const loadData = async () => {
@@ -88,7 +88,7 @@ export function Monitoring() {
     // Auto-refresh every 30 seconds
     const interval = setInterval(refreshData, 30000)
     return () => clearInterval(interval)
-  }, [fetchDashboardData, refreshData])
+  }, [fetchDashboardData, fetchUserLimits, refreshData])
 
   const getStatusColor = (status) => {
     switch (status) {
