@@ -105,13 +105,20 @@ def create_app():
     )
     
     # Configure CORS
-    cors_origins = os.getenv('CORS_ORIGINS', '*').split(',')
+    cors_origins = os.getenv('CORS_ORIGINS', '*')
+    if cors_origins != '*':
+        # Parse comma-separated origins for production
+        origins_list = [origin.strip() for origin in cors_origins.split(',') if origin.strip()]
+    else:
+        # Fallback to wildcard for development
+        origins_list = ["*"]
+    
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=cors_origins,
+        allow_origins=origins_list,
         allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
+        allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+        allow_headers=["Content-Type", "Authorization", "X-Requested-With"],
     )
     
     # Import and include API routes

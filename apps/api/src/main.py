@@ -34,17 +34,40 @@ app = Flask(__name__, static_folder=os.path.join(os.path.dirname(__file__), 'sta
 # Configure custom JSON encoder for proper serialization
 app.json_encoder = CustomJSONEncoder
 
-# Configure CORS for all routes
-CORS(app, origins="*", allow_headers=["Content-Type", "Authorization"])
+# Configure CORS for Railway deployment
+cors_origins = os.getenv('CORS_ORIGINS', '*')
+if cors_origins != '*':
+    # Parse comma-separated origins for production
+    origins_list = [origin.strip() for origin in cors_origins.split(',') if origin.strip()]
+else:
+    # Fallback to wildcard for development
+    origins_list = "*"
 
-# Initialize SocketIO with Redis message queue for Railway
+CORS(app, 
+     origins=origins_list, 
+     allow_headers=["Content-Type", "Authorization", "X-Requested-With"],
+     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+     supports_credentials=True)
+
+# Initialize SocketIO with Railway-compatible configuration
+socketio_cors_origins = os.getenv('CORS_ORIGINS', '*')
+if socketio_cors_origins != '*':
+    # Parse comma-separated origins for production
+    socketio_origins = [origin.strip() for origin in socketio_cors_origins.split(',') if origin.strip()]
+else:
+    # Fallback for development
+    socketio_origins = "*"
+
 socketio = SocketIO(
     app,
-    cors_allowed_origins="*",
+    cors_allowed_origins=socketio_origins,
     async_mode='gevent',
     message_queue=os.environ.get('REDIS_URL', None),
     logger=True,
-    engineio_logger=True
+    engineio_logger=True,
+    ping_timeout=60,
+    ping_interval=25,
+    transports=['websocket', 'polling']
 )
 
 # Load configuration from environment variables
@@ -94,7 +117,15 @@ except Exception as e:
 # Health check endpoint
 @app.route('/health')
 def health_check():
-    return {'status': 'healthy', 'service': 'crazy-gary-api', 'version': '1.0.0'}
+    """Basic health check for Railway"""
+    return {
+        'status': 'healthy', 
+        'service': 'crazy-gary-api', 
+        'version': '1.0.0',
+        'environment': os.getenv('ENVIRONMENT', 'development'),
+        'railway_env': os.getenv('RAILWAY_ENVIRONMENT', 'not_set'),
+        'timestamp': time.time()
+    }
 
 @app.route('/api/health')
 def api_health_check():
