@@ -6,12 +6,10 @@ Provides endpoints to interact with the Coder development environment.
 import os
 import requests
 from flask import Blueprint, jsonify, request
-from ..middleware.request_logging import log_request
 
 coder_bp = Blueprint('coder', __name__)
 
 @coder_bp.route('/status', methods=['GET'])
-@log_request
 def get_coder_status():
     """Get Coder service status and connection info."""
     try:
@@ -50,7 +48,6 @@ def get_coder_status():
         }), 500
 
 @coder_bp.route('/workspaces', methods=['GET'])
-@log_request
 def get_workspaces():
     """Get list of Coder workspaces."""
     try:
@@ -90,7 +87,6 @@ def get_workspaces():
         }), 500
 
 @coder_bp.route('/templates', methods=['GET'])
-@log_request
 def get_templates():
     """Get list of Coder templates."""
     try:
@@ -128,4 +124,3 @@ def get_templates():
             'error': 'Failed to get templates',
             'message': str(e)
         }), 500
-
