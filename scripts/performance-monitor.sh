@@ -41,7 +41,34 @@ if [ -d "apps/web" ]; then
         total_size=$(du -sh dist | cut -f1)
         echo -e "\nTotal build size: ${YELLOW}$total_size${NC}"
         
-        # Check if main bundle is under 500KB
+        # Check if all main bundles are under 500KB
+        main_js_files=$(find dist/assets -name "index-*.js" 2>/dev/null)
+        total_main_size=0
+        all_under_limit=true
+
+        if [ -n "$main_js_files" ]; then
+            echo -e "\nChecking main bundle(s) size:"
+            for main_js in $main_js_files; do
+                main_size=$(stat -f%z "$main_js" 2>/dev/null || stat -c%s "$main_js" 2>/dev/null || echo "0")
+                main_size_kb=$((main_size / 1024))
+                total_main_size=$((total_main_size + main_size_kb))
+                name=$(basename "$main_js")
+                if [ $main_size_kb -lt 500 ]; then
+                    echo -e "${GREEN}✅ $name is under 500KB ($main_size_kb KB)${NC}"
+                else
+                    echo -e "${RED}❌ $name exceeds 500KB ($main_size_kb KB)${NC}"
+                    all_under_limit=false
+                fi
+            done
+            echo -e "${YELLOW}Total main bundle size: $total_main_size KB${NC}"
+            if $all_under_limit; then
+                echo -e "${GREEN}✅ All main bundles are under 500KB${NC}"
+            else
+                echo -e "${RED}❌ One or more main bundles exceed 500KB${NC}"
+            fi
+        else
+            echo -e "${RED}No main bundle files found (index-*.js)${NC}"
+        fi
         main_js=$(find dist/assets -name "index-*.js" 2>/dev/null | head -n1)
         if [ -f "$main_js" ]; then
             main_size=$(stat -f%z "$main_js" 2>/dev/null || stat -c%s "$main_js" 2>/dev/null || echo "0")
