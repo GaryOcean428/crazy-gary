@@ -19,8 +19,8 @@
     "analyze": "npm run build && npx vite-bundle-visualizer",
     "check-bundle": "npm run build && ls -la dist/assets/",
     "accessibility": "npm run build && npx axe-core dist",
-    "format": "prettier --write 'src/**/*.{ts,tsx,js,jsx,json,css}'",
-    "format:check": "prettier --check 'src/**/*.{ts,tsx,js,jsx,json,css}'"
+    "format": "prettier --write \"src/**/*.{ts,tsx,js,jsx,json,css}\"",
+    "format:check": "prettier --check \"src/**/*.{ts,tsx,js,jsx,json,css}\""
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
