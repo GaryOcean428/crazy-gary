@@ -1,0 +1,15 @@
+2025-09-16 12:37:04,409 - src.models.observability - ERROR - http_400: GET /api/coder/templates returned 400
+2025-09-16 12:37:04,712 - src.models.observability - ERROR - http_400: GET /api/coder/workspaces returned 400
+2025-09-16 12:37:20,177 - flask_cors.core - WARNING - Unknown option passed to Flask-CORS: allow_methods
+2025-09-16 12:37:20,178 - flask_cors.core - WARNING - Unknown option passed to Flask-CORS: allow_methods
+2025-09-16 12:37:20,213 - engineio.server - INFO - Server initialized for gevent.
+2025-09-16 12:37:20,242 - src.models.migrations - INFO - 🔄 Starting database migrations...
+2025-09-16 12:37:20,243 - src.models.migrations - INFO - ⚠️ Column already exists: ALTER TABLE user ADD COLUMN full_name VARCHAR(200);
+2025-09-16 12:37:20,243 - src.models.migrations - INFO - ⚠️ Column already exists: ALTER TABLE user ADD COLUMN password_hash VARCHAR(255);
+2025-09-16 12:37:20,243 - src.models.migrations - WARNING - ⚠️ Migration failed (might be expected): ALTER TABLE user ADD COLUMN created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP; - (sqlite3.OperationalError) Cannot add a column with non-constant default
+[SQL: ALTER TABLE user ADD COLUMN created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;]
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+2025-09-16 12:37:20,243 - src.models.migrations - INFO - ⚠️ Column already exists: ALTER TABLE user ADD COLUMN is_active BOOLEAN DEFAULT 1;
+2025-09-16 12:37:20,244 - src.models.migrations - INFO - ✅ User table migration completed successfully
+2025-09-16 12:37:20,244 - src.models.migrations - INFO - ✅ All migrations completed successfully
+2025-09-16 12:37:20,247 - root - INFO - Railway deployment information
