@@ -105,15 +105,27 @@ export interface AuthUser {
   email: string;
   name: string;
   role: string;
-  token: string;
+  token?: string;
+}
+
+export interface AuthResponse {
+  success: boolean;
+  user?: AuthUser;
+  token?: string;
+  error?: string;
 }
 
 export interface AuthContextType {
   user: AuthUser | null;
-  login: (email: string, password: string) => Promise<void>;
-  logout: () => void;
-  register: (name: string, email: string, password: string) => Promise<void>;
+  token: string | null;
   loading: boolean;
+  login: (email: string, password: string) => Promise<AuthResponse>;
+  logout: () => void;
+  register: (name: string, email: string, password: string) => Promise<AuthResponse>;
+  updateProfile: (profileData: Partial<AuthUser>) => Promise<AuthResponse>;
+  changePassword: (currentPassword: string, newPassword: string) => Promise<AuthResponse>;
+  refreshToken: () => Promise<AuthResponse>;
+  isAuthenticated: boolean;
 }
 
 // Form Types

@@ -1,11 +1,15 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@/contexts/auth-context'
 import { Loader2 } from 'lucide-react'
 
-export function ProtectedRoute({ children }) {
+interface ProtectedRouteProps {
+  children: ReactNode;
+}
+
+export function ProtectedRoute({ children }: ProtectedRouteProps) {
   const { user, loading } = useAuth()
   const navigate = useNavigate()
 

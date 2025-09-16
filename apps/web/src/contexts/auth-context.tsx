@@ -1,10 +1,22 @@
 'use client'
 
-import { createContext, useContext, useState, useEffect } from 'react'
+import { createContext, useContext, useState, useEffect, ReactNode } from 'react'
+import type { AuthContextType, AuthUser } from '@/types'
 
-const AuthContext = createContext({})
+interface AuthResponse {
+  success: boolean;
+  user?: AuthUser;
+  token?: string;
+  error?: string;
+}
 
-export function AuthProvider({ children }) {
+interface AuthProviderProps {
+  children: ReactNode;
+}
+
+const AuthContext = createContext<AuthContextType | undefined>(undefined)
+
+export function AuthProvider({ children }: AuthProviderProps) {
   const [user, setUser] = useState(null)
   const [loading, setLoading] = useState(true)
   const [token, setToken] = useState(null)
@@ -32,7 +44,7 @@ export function AuthProvider({ children }) {
     }
   }, [])
 
-  const validateToken = async (authToken) => {
+  const validateToken = async (authToken: string): Promise<void> => {
     try {
       const response = await fetch('/api/auth/validate', {
         headers: {
@@ -67,7 +79,7 @@ export function AuthProvider({ children }) {
     }
   }
 
-  const login = async (email, password) => {
+  const login = async (email: string, password: string): Promise<AuthResponse> => {
     try {
       // Check for demo credentials
       if (email === 'demo@crazy-gary.ai' && password === 'demo123') {
@@ -109,14 +121,14 @@ export function AuthProvider({ children }) {
     }
   }
 
-  const register = async (email, password, name) => {
+  const register = async (name: string, email: string, password: string): Promise<AuthResponse> => {
     try {
       const response = await fetch('/api/auth/register', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ email, password, name })
+        body: JSON.stringify({ name, email, password })
       })
 
       const data = await response.json()
@@ -135,7 +147,7 @@ export function AuthProvider({ children }) {
     }
   }
 
-  const logout = () => {
+  const logout = (): void => {
     setUser(null)
     setToken(null)
     localStorage.removeItem('auth_token')
@@ -151,7 +163,7 @@ export function AuthProvider({ children }) {
     }
   }
 
-  const updateProfile = async (profileData) => {
+  const updateProfile = async (profileData: Partial<AuthUser>): Promise<AuthResponse> => {
     try {
       const response = await fetch('/api/auth/me', {
         method: 'PUT',
@@ -176,7 +188,7 @@ export function AuthProvider({ children }) {
     }
   }
 
-  const changePassword = async (currentPassword, newPassword) => {
+  const changePassword = async (currentPassword: string, newPassword: string): Promise<AuthResponse> => {
     try {
       const response = await fetch('/api/auth/change-password', {
         method: 'POST',
@@ -203,7 +215,7 @@ export function AuthProvider({ children }) {
     }
   }
 
-  const refreshToken = async () => {
+  const refreshToken = async (): Promise<AuthResponse> => {
     try {
       const response = await fetch('/api/auth/refresh', {
         method: 'POST',
@@ -230,7 +242,7 @@ export function AuthProvider({ children }) {
     }
   }
 
-  const value = {
+  const value: AuthContextType = {
     user,
     token,
     loading,
@@ -250,7 +262,7 @@ export function AuthProvider({ children }) {
   )
 }
 
-export function useAuth() {
+export function useAuth(): AuthContextType {
   const context = useContext(AuthContext)
   if (!context) {
     throw new Error('useAuth must be used within an AuthProvider')
