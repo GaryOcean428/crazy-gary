@@ -36,6 +36,13 @@ echo -e "${GREEN}✅ Python version is compatible${NC}"
 
 # Install Yarn 4
 echo -e "\n${YELLOW}Setting up Yarn 4...${NC}"
+if ! command -v corepack &> /dev/null; then
+    echo -e "${RED}Error: Corepack is not installed or not available in your PATH.${NC}"
+    echo "Corepack is required to install Yarn 4."
+    echo "Please install Node.js (version 16.10 or higher includes Corepack by default), or see https://nodejs.org/en/download/ for instructions."
+    exit 1
+fi
+
 if ! command -v yarn &> /dev/null; then
     echo "Installing Yarn..."
     corepack enable
