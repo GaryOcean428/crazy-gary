@@ -47,7 +47,7 @@ function App() {
 
 function ProtectedApp() {
   const [sidebarOpen, setSidebarOpen] = useState(true)
-  const [currentTask, setCurrentTask] = useState(null)
+  const [currentTask, setCurrentTask] = useState<Task | null>(null)
 
   return (
     <>
