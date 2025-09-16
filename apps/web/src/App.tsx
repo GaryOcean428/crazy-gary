@@ -16,6 +16,7 @@ import { Register } from '@/pages/register'
 import { Monitoring } from '@/pages/monitoring'
 import { AuthProvider } from '@/contexts/auth-context'
 import { ProtectedRoute } from '@/components/protected-route'
+import type { Task } from '@/types'
 import './App.css'
 
 function App() {

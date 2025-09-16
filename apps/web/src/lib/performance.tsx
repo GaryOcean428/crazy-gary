@@ -3,12 +3,12 @@
  * Provides hooks and components for better performance
  */
 
-import React, { useCallback, useMemo, useRef, useEffect, useState } from 'react'
+import React, { useCallback, useMemo, useRef, useEffect, useState, ReactNode } from 'react'
 import ErrorBoundary from '../components/error-boundary'
 
 // Debounce hook for input handling
-export const useDebounce = (value, delay) => {
-  const [debouncedValue, setDebouncedValue] = useState(value)
+export const useDebounce = <T,>(value: T, delay: number): T => {
+  const [debouncedValue, setDebouncedValue] = useState<T>(value)
 
   useEffect(() => {
     const handler = setTimeout(() => {
@@ -24,10 +24,10 @@ export const useDebounce = (value, delay) => {
 }
 
 // Throttle hook for scroll/resize events
-export const useThrottle = (callback, delay) => {
+export const useThrottle = <T extends (...args: any[]) => any,>(callback: T, delay: number) => {
   const lastRun = useRef(Date.now())
 
-  return useCallback((...args) => {
+  return useCallback((...args: Parameters<T>) => {
     if (Date.now() - lastRun.current >= delay) {
       callback(...args)
       lastRun.current = Date.now()
@@ -36,9 +36,9 @@ export const useThrottle = (callback, delay) => {
 }
 
 // Intersection Observer hook for lazy loading
-export const useIntersectionObserver = (options = {}) => {
-  const [entry, setEntry] = useState(null)
-  const elementRef = useRef(null)
+export const useIntersectionObserver = (options: IntersectionObserverInit = {}) => {
+  const [entry, setEntry] = useState<IntersectionObserverEntry | null>(null)
+  const elementRef = useRef<HTMLElement | null>(null)
 
   useEffect(() => {
     const element = elementRef.current
@@ -66,7 +66,14 @@ export const useIntersectionObserver = (options = {}) => {
 }
 
 // Lazy loading component
-export const LazyImage = ({ 
+interface LazyImageProps extends React.ImgHTMLAttributes<HTMLImageElement> {
+  src: string;
+  alt: string;
+  placeholder?: string;
+  className?: string;
+}
+
+export const LazyImage: React.FC<LazyImageProps> = ({ 
   src, 
   alt, 
   placeholder = '/placeholder.svg',
@@ -86,7 +93,7 @@ export const LazyImage = ({
 
   return (
     <img
-      ref={elementRef}
+      ref={elementRef as React.RefObject<HTMLImageElement>}
       src={imageSrc}
       alt={alt}
       className={`transition-opacity duration-300 ${
@@ -99,12 +106,19 @@ export const LazyImage = ({
 }
 
 // Virtual scrolling hook for large lists
+interface UseVirtualScrollProps {
+  items: any[];
+  itemHeight: number;
+  containerHeight: number;
+  overscan?: number;
+}
+
 export const useVirtualScroll = ({ 
   items, 
   itemHeight, 
   containerHeight, 
   overscan = 5 
-}) => {
+}: UseVirtualScrollProps) => {
   const [scrollTop, setScrollTop] = useState(0)
   
   const visibleRange = useMemo(() => {
@@ -129,8 +143,8 @@ export const useVirtualScroll = ({
 
   const totalHeight = items.length * itemHeight
 
-  const handleScroll = useCallback((e) => {
-    setScrollTop(e.target.scrollTop)
+  const handleScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
+    setScrollTop(e.currentTarget.scrollTop)
   }, [])
 
   return {
@@ -142,7 +156,15 @@ export const useVirtualScroll = ({
 }
 
 // Virtual list component
-export const VirtualList = ({
+interface VirtualListProps {
+  items: any[];
+  itemHeight: number;
+  height: number;
+  renderItem: (item: any, index: number) => ReactNode;
+  className?: string;
+}
+
+export const VirtualList: React.FC<VirtualListProps> = ({
   items,
   itemHeight,
   height,
@@ -179,14 +201,17 @@ export const VirtualList = ({
 }
 
 // Memoized component wrapper
-export const memo = (Component, propsAreEqual) => {
+export const memo = <P extends object,>(
+  Component: React.ComponentType<P>, 
+  propsAreEqual?: (prevProps: P, nextProps: P) => boolean
+) => {
   return React.memo(Component, propsAreEqual)
 }
 
 // Performance monitoring hook
-export const usePerformanceMonitor = (name) => {
+export const usePerformanceMonitor = (name: string) => {
   const renderCount = useRef(0)
-  const renderTimes = useRef([])
+  const renderTimes = useRef<number[]>([])
 
   useEffect(() => {
     renderCount.current += 1
@@ -218,8 +243,20 @@ export const usePerformanceMonitor = (name) => {
 }
 
 // Bundle analyzer component (development only)
-export const BundleAnalyzer = () => {
-  const [bundleStats, setBundleStats] = useState(null)
+interface BundleChunk {
+  name: string;
+  size: string;
+  gzipSize: string;
+}
+
+interface BundleStats {
+  totalSize: string;
+  gzipSize: string;
+  chunks: BundleChunk[];
+}
+
+export const BundleAnalyzer: React.FC = () => {
+  const [bundleStats, setBundleStats] = useState<BundleStats | null>(null)
 
   useEffect(() => {
     // Simulate bundle analysis (in real app, this would come from webpack-bundle-analyzer)
