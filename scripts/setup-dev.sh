@@ -68,7 +68,16 @@ fi
 
 # Activate venv and install Python dependencies
 cd apps/api
-source venv/bin/activate
+
+# OS-aware venv activation
+if [[ "$OSTYPE" == "msys" || "$OSTYPE" == "win32" || "$OSTYPE" == "cygwin" ]]; then
+    # Windows
+    venv\Scripts\activate
+else
+    # Unix-like
+    source venv/bin/activate
+fi
+
 echo "Installing Python dependencies..."
 pip install --upgrade pip
 if [ -f "requirements-updated.txt" ]; then
@@ -76,6 +85,7 @@ if [ -f "requirements-updated.txt" ]; then
 else
     pip install -r requirements.txt
 fi
+
 deactivate
 cd ../..
 echo -e "${GREEN}✅ Python environment setup complete${NC}"
