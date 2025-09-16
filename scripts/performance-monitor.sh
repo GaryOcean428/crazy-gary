@@ -1,196 +1,157 @@
 #!/bin/bash
 
-# Performance Monitoring and Optimization Script
-# This script provides comprehensive performance analysis and optimization
+# Performance Monitoring Script for Crazy Gary
+# Analyzes bundle size, dependencies, and performance metrics
 
 set -e
 
-echo "⚡ Crazy-Gary Performance Monitor & Optimizer"
+echo "📊 Starting Performance Analysis..."
 
-# Bundle size analysis
-analyze_bundle_size() {
-    echo "📊 Analyzing bundle sizes..."
-    
+# Colors
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m'
+
+# Check if running in CI
+if [ "$CI" = "true" ]; then
+    echo "Running in CI mode"
+fi
+
+# Frontend Performance Analysis
+echo -e "\n${BLUE}🎨 Frontend Performance Analysis${NC}"
+if [ -d "apps/web" ]; then
     cd apps/web
-    npm run build
     
-    echo "Frontend bundle analysis:"
-    ls -lh dist/assets/*.js | awk '{print $5 "\t" $9}'
+    # Build the project
+    echo "Building frontend..."
+    yarn build
     
-    echo ""
-    echo "🎯 Bundle optimization recommendations:"
-    echo "- Main bundle: <500KB (currently: $(du -h dist/assets/index-*.js | cut -f1))"
-    echo "- Vendor bundle: <200KB (currently: $(du -h dist/assets/vendor-*.js | cut -f1))"
-    echo "- Router bundle: <50KB (currently: $(du -h dist/assets/router-*.js | cut -f1))"
+    # Analyze bundle size
+    echo -e "\n${YELLOW}📦 Bundle Size Analysis${NC}"
+    if [ -d "dist" ]; then
+        echo "Main bundles:"
+        find dist -name "*.js" -o -name "*.css" | while read file; do
+            size=$(du -h "$file" | cut -f1)
+            name=$(basename "$file")
+            echo "  - $name: $size"
+        done
+        
+        total_size=$(du -sh dist | cut -f1)
+        echo -e "\nTotal build size: ${YELLOW}$total_size${NC}"
+        
+        # Check if main bundle is under 500KB
+        main_js=$(find dist/assets -name "index-*.js" 2>/dev/null | head -n1)
+        if [ -f "$main_js" ]; then
+            main_size=$(stat -f%z "$main_js" 2>/dev/null || stat -c%s "$main_js" 2>/dev/null || echo "0")
+            main_size_kb=$((main_size / 1024))
+            
+            if [ $main_size_kb -lt 500 ]; then
+                echo -e "${GREEN}✅ Main bundle is under 500KB ($main_size_kb KB)${NC}"
+            else
+                echo -e "${YELLOW}⚠️  Main bundle exceeds 500KB ($main_size_kb KB)${NC}"
+                echo "Consider:"
+                echo "  - Code splitting"
+                echo "  - Lazy loading routes"
+                echo "  - Tree shaking unused imports"
+                echo "  - Dynamic imports for heavy components"
+            fi
+        fi
+    fi
+    
+    # Check for large dependencies
+    echo -e "\n${YELLOW}📊 Dependency Size Analysis${NC}"
+    echo "Large dependencies (>100KB):"
+    
+    # Run bundle analyzer if available
+    if command -v vite-bundle-visualizer >/dev/null 2>&1; then
+        echo "Generating bundle visualization..."
+        npx vite-bundle-visualizer dist -o bundle-report.html 2>/dev/null || true
+        if [ -f "bundle-report.html" ]; then
+            echo -e "${GREEN}✅ Bundle report generated: apps/web/bundle-report.html${NC}"
+        fi
+    fi
     
     cd ../..
-}
+fi
 
-# Build performance analysis
-analyze_build_performance() {
-    echo "🔨 Analyzing build performance..."
+# Backend Performance Analysis
+echo -e "\n${BLUE}🐍 Backend Performance Analysis${NC}"
+if [ -d "apps/api" ]; then
+    cd apps/api
     
-    start_time=$(date +%s)
-    npm run build > /dev/null 2>&1
-    end_time=$(date +%s)
-    build_time=$((end_time - start_time))
-    
-    echo "Build time: ${build_time}s"
-    
-    if [ $build_time -gt 60 ]; then
-        echo "⚠️  Build time is slow (>60s). Consider:"
-        echo "   - Enabling build caching"
-        echo "   - Optimizing dependencies"
-        echo "   - Using parallel builds"
-    else
-        echo "✅ Build time is acceptable"
+    # Check Python package sizes
+    echo "Analyzing Python dependencies..."
+    if [ -f "requirements.txt" ]; then
+        echo "Top dependencies:"
+        head -10 requirements.txt
     fi
-}
-
-# Memory usage analysis
-analyze_memory_usage() {
-    echo "💾 Analyzing memory usage..."
     
-    if command -v python &> /dev/null; then
-        python3 << 'EOF'
-try:
-    import psutil
-    
-    # Check current memory usage
-    memory = psutil.virtual_memory()
-    print(f"Memory usage: {memory.percent}%")
-    print(f"Available: {memory.available / (1024**3):.1f}GB")
-    print(f"Total: {memory.total / (1024**3):.1f}GB")
-    
-    if memory.percent > 80:
-        print("⚠️  High memory usage detected")
-        print("   - Consider optimizing database queries")
-        print("   - Check for memory leaks in long-running processes")
-    else:
-        print("✅ Memory usage is normal")
-except ImportError:
-    print("⚠️  psutil not available - skipping detailed memory analysis")
-    print("✅ Using basic system memory check")
-    # Basic memory check using system commands
-    import os
-    if os.name == 'posix':
-        os.system('free -h 2>/dev/null || echo "Memory info not available"')
-EOF
-    else
-        echo "⚠️  Python not available - skipping memory analysis"
-    fi
-}
+    cd ../..
+fi
 
-# Database performance check
-check_database_performance() {
-    echo "🗄️  Checking database performance..."
-    
-    echo "Database optimization tips:"
-    echo "- Add indexes for frequently queried columns"
-    echo "- Use connection pooling"
-    echo "- Implement query result caching"
-    echo "- Monitor slow query logs"
-}
+# Memory Usage Estimation
+echo -e "\n${YELLOW}💾 Memory Usage Recommendations${NC}"
+echo "Frontend (React app): ~50-100MB"
+echo "Backend (Flask): ~100-200MB base"
+echo "Database connections: ~10MB per connection"
+echo "Redis cache: Configure based on usage"
 
-# Frontend performance optimization
-optimize_frontend() {
-    echo "🎨 Frontend optimization recommendations:"
-    echo ""
-    echo "1. Code Splitting:"
-    echo "   - Implement route-based code splitting"
-    echo "   - Lazy load heavy components"
-    echo "   - Split vendor bundles by usage frequency"
-    echo ""
-    echo "2. Asset Optimization:"
-    echo "   - Compress images and use WebP format"
-    echo "   - Enable gzip/brotli compression"
-    echo "   - Implement CDN for static assets"
-    echo ""
-    echo "3. Runtime Optimization:"
-    echo "   - Use React.memo for expensive components"
-    echo "   - Implement virtual scrolling for large lists"
-    echo "   - Optimize re-renders with useCallback/useMemo"
-}
+# Performance Optimizations Checklist
+echo -e "\n${BLUE}⚡ Performance Optimization Checklist${NC}"
+echo "Frontend:"
+echo "  [ ] Code splitting implemented"
+echo "  [ ] Lazy loading for routes"
+echo "  [ ] Images optimized (WebP/AVIF)"
+echo "  [ ] CSS purged of unused styles"
+echo "  [ ] Service worker for caching"
+echo "  [ ] Compression enabled (gzip/brotli)"
+echo "  [ ] CDN for static assets"
+echo "\nBackend:"
+echo "  [ ] Database queries optimized"
+echo "  [ ] Caching strategy implemented"
+echo "  [ ] Rate limiting configured"
+echo "  [ ] Connection pooling enabled"
+echo "  [ ] Background tasks for heavy operations"
+echo "  [ ] Response compression"
+echo "  [ ] Monitoring and APM configured"
 
-# API performance optimization
-optimize_api() {
-    echo "🔧 API optimization recommendations:"
-    echo ""
-    echo "1. Response Optimization:"
-    echo "   - Implement response compression"
-    echo "   - Use pagination for large datasets"
-    echo "   - Add response caching headers"
-    echo ""
-    echo "2. Database Optimization:"
-    echo "   - Use database connection pooling"
-    echo "   - Implement query result caching"
-    echo "   - Add database indexes for common queries"
-    echo ""
-    echo "3. Infrastructure:"
-    echo "   - Use Redis for session storage"
-    echo "   - Implement API rate limiting"
-    echo "   - Add health check endpoints"
-}
+# Lighthouse Metrics (if available)
+echo -e "\n${YELLOW}🏁 Performance Metrics Targets${NC}"
+echo "Target Web Vitals:"
+echo "  - LCP (Largest Contentful Paint): < 2.5s"
+echo "  - FID (First Input Delay): < 100ms"
+echo "  - CLS (Cumulative Layout Shift): < 0.1"
+echo "  - FCP (First Contentful Paint): < 1.8s"
+echo "  - TTI (Time to Interactive): < 3.8s"
 
-# Generate performance report
-generate_report() {
-    echo "📈 Generating performance report..."
-    
-    cat > performance-report.md << EOF
-# Performance Report - $(date)
+# Generate Performance Report
+REPORT_FILE="performance-report.md"
+echo -e "\n${GREEN}📄 Generating performance report...${NC}"
+cat > $REPORT_FILE << EOF
+# Performance Report
 
-## Bundle Sizes
-$(cd apps/web && ls -lh dist/assets/*.js | awk '{print "- " $9 ": " $5}')
+## Date: $(date)
 
-## Build Performance
-- Last build time: ${build_time}s
-- Build status: $([ $build_time -gt 60 ] && echo "Needs optimization" || echo "Good")
+## Frontend Bundle Analysis
+- Total build size: $(du -sh apps/web/dist 2>/dev/null | cut -f1 || echo "N/A")
+- Main bundle: Check dist/assets for details
 
 ## Recommendations
-### High Priority
-- [ ] Implement code splitting for large routes
-- [ ] Add bundle analysis to CI/CD pipeline
-- [ ] Set up performance monitoring
+1. Implement code splitting for large routes
+2. Use dynamic imports for heavy components
+3. Enable compression in production
+4. Configure CDN for static assets
+5. Implement service worker for offline support
 
-### Medium Priority
-- [ ] Optimize image assets and add WebP support
-- [ ] Implement service worker for caching
-- [ ] Add database query optimization
-
-### Low Priority
-- [ ] Add performance budgets
-- [ ] Implement advanced caching strategies
-- [ ] Set up CDN for static assets
-
-## Monitoring
-- Set up build time tracking
-- Monitor bundle size growth
-- Track Core Web Vitals in production
+## Next Steps
+- Run Lighthouse audit in production
+- Set up continuous performance monitoring
+- Implement performance budgets in CI/CD
 EOF
 
-    echo "📄 Performance report saved to performance-report.md"
-}
+echo -e "${GREEN}✅ Performance analysis complete!${NC}"
+echo "Report saved to: $REPORT_FILE"
 
-# Main execution
-main() {
-    analyze_bundle_size
-    echo ""
-    analyze_build_performance
-    echo ""
-    analyze_memory_usage
-    echo ""
-    check_database_performance
-    echo ""
-    optimize_frontend
-    echo ""
-    optimize_api
-    echo ""
-    generate_report
-    
-    echo ""
-    echo "🎉 Performance analysis complete!"
-    echo "📄 Check performance-report.md for detailed recommendations"
-}
-
-# Run main function
-main "$@"
+exit 0

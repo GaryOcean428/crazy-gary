@@ -1,325 +1,202 @@
-name: Quality Assurance Pipeline
+name: CI/CD Pipeline
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [main, develop, 'fix/*', 'feature/*']
   pull_request:
-    branches: [ main, develop ]
-  workflow_dispatch:
-
-# Cancel in-progress runs for the same workflow
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
-
-env:
-  NODE_VERSION: '18'
-  PYTHON_VERSION: '3.10'
+    branches: [main, develop]
 
 jobs:
-  lint-and-type-check:
-    name: 🔍 Lint & Type Check
+  quality:
+    name: Code Quality
     runs-on: ubuntu-latest
     
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - uses: actions/checkout@v4
       
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: ${{ env.NODE_VERSION }}
-        cache: 'npm'
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22.x'
+          
+      - name: Enable Corepack
+        run: corepack enable
         
-    - name: Cache node modules
-      uses: actions/cache@v4
-      with:
-        path: ~/.npm
-        key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
-        restore-keys: |
-          ${{ runner.os }}-node-
+      - name: Install Yarn
+        run: corepack prepare yarn@4.0.2 --activate
         
-    - name: Install dependencies
-      run: npm ci --legacy-peer-deps
-      
-    - name: Run ESLint
-      run: npm run lint
-      
-    - name: Run type checking
-      run: npm run type-check
+      - name: Install dependencies
+        run: yarn install --immutable
+        
+      - name: Run linting
+        run: yarn lint
+        
+      - name: Type checking
+        run: yarn type-check
+        
+      - name: Format check
+        run: yarn format:check
 
-  build-and-test:
-    name: 🏗️ Build & Test
+  test-frontend:
+    name: Frontend Tests
     runs-on: ubuntu-latest
+    needs: quality
     
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - uses: actions/checkout@v4
       
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: ${{ env.NODE_VERSION }}
-        cache: 'npm'
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22.x'
+          
+      - name: Enable Corepack
+        run: corepack enable
         
-    - name: Setup Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: ${{ env.PYTHON_VERSION }}
-        cache: 'pip'
+      - name: Install Yarn
+        run: corepack prepare yarn@4.0.2 --activate
         
-    - name: Cache node modules
-      uses: actions/cache@v4
-      with:
-        path: ~/.npm
-        key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
-        restore-keys: |
-          ${{ runner.os }}-node-
+      - name: Install dependencies
+        run: yarn install --immutable
         
-    - name: Cache pip dependencies
-      uses: actions/cache@v4
-      with:
-        path: ~/.cache/pip
-        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
-        restore-keys: |
-          ${{ runner.os }}-pip-
+      - name: Run tests with coverage
+        run: yarn test:coverage
+        working-directory: apps/web
         
-    - name: Install dependencies
-      run: |
-        npm ci --legacy-peer-deps
-        pip install -r requirements.txt
-        
-    - name: Build packages
-      run: npm run build
-      
-    - name: Run tests
-      run: npm run test
-      
-    - name: Upload build artifacts
-      uses: actions/upload-artifact@v4
-      with:
-        name: build-artifacts
-        path: |
-          apps/web/dist/
-          packages/*/dist/
-        retention-days: 7
+      - name: Upload coverage
+        uses: codecov/codecov-action@v3
+        with:
+          files: ./apps/web/coverage/coverage-final.json
+          flags: frontend
 
-  python-tests:
-    name: 🐍 Python Tests
+  test-backend:
+    name: Backend Tests
     runs-on: ubuntu-latest
+    needs: quality
+    
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: test_db
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
     
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - uses: actions/checkout@v4
       
-    - name: Setup Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: ${{ env.PYTHON_VERSION }}
-        cache: 'pip'
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+          
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r apps/api/requirements-updated.txt
+          pip install pytest pytest-cov
         
-    - name: Cache pip dependencies
-      uses: actions/cache@v4
-      with:
-        path: ~/.cache/pip
-        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
-        restore-keys: |
-          ${{ runner.os }}-pip-
-        
-    - name: Install dependencies
-      run: |
-        pip install -r requirements.txt
-        
-    - name: Run Python tests
-      env:
-        HUGGINGFACE_API_KEY: "test-key"
-        OPENAI_API_KEY: "test-key"
-        OPENROUTER_API_KEY: "test-key"
-        DATABASE_URL: "sqlite:///:memory:"
-        JWT_SECRET_KEY: "test-secret-key"
-      run: |
-        cd tests
-        python -m pytest -v --cov=../apps/api/src --cov-report=xml --cov-report=html
-        
-    - name: Upload coverage reports
-      uses: codecov/codecov-action@v3
-      with:
-        file: ./tests/coverage.xml
-        flags: python
-        fail_ci_if_error: false
-        
-    - name: Upload coverage HTML
-      uses: actions/upload-artifact@v4
-      with:
-        name: coverage-report
-        path: tests/htmlcov/
-        retention-days: 7
+      - name: Run tests with coverage
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost/test_db
+        run: |
+          cd apps/api
+          pytest --cov=src --cov-report=xml
+          
+      - name: Upload coverage
+        uses: codecov/codecov-action@v3
+        with:
+          files: ./apps/api/coverage.xml
+          flags: backend
 
-  performance-check:
-    name: ⚡ Performance Check
+  security:
+    name: Security Audit
     runs-on: ubuntu-latest
-    needs: build-and-test
+    needs: quality
     
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - uses: actions/checkout@v4
       
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: ${{ env.NODE_VERSION }}
-        cache: 'npm'
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22.x'
+          
+      - name: Enable Corepack
+        run: corepack enable
         
-    - name: Cache node modules
-      uses: actions/cache@v4
-      with:
-        path: ~/.npm
-        key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
-        restore-keys: |
-          ${{ runner.os }}-node-
+      - name: Install Yarn
+        run: corepack prepare yarn@4.0.2 --activate
         
-    - name: Install dependencies
-      run: npm ci --legacy-peer-deps
-      
-    - name: Build for performance analysis
-      run: npm run build
-      
-    - name: Analyze bundle size
-      run: |
-        echo "Bundle size analysis:"
-        cd apps/web
-        if [ -d "dist" ]; then
-          find dist -name "*.js" -exec ls -lh {} \; | awk '{print $5 "\t" $9}'
-        else
-          echo "No dist directory found"
-        fi
+      - name: Frontend security audit
+        run: yarn audit --level moderate
+        continue-on-error: true
         
-    - name: Run performance tests
-      run: |
-        chmod +x ./scripts/performance-monitor.sh
-        ./scripts/performance-monitor.sh || echo "Performance test completed with warnings"
-        
-    - name: Check bundle size limits
-      run: |
-        cd apps/web/dist/assets
-        for file in *.js; do
-          if [ -f "$file" ]; then
-            size=$(stat -f%z "$file" 2>/dev/null || stat -c%s "$file")
-            # Main bundle should be < 500KB
-            if [[ "$file" == index-*.js && $size -gt 512000 ]]; then
-              echo "⚠️  Main bundle $file is too large: $size bytes (>500KB)"
-              exit 1
-            fi
-          fi
-        done
-      
-    - name: Upload performance report
-      uses: actions/upload-artifact@v4
-      if: always()
-      with:
-        name: performance-report
-        path: performance-report.md
-        retention-days: 7
+      - name: Python security audit
+        run: |
+          pip install safety
+          safety check --json
+        continue-on-error: true
 
-  security-scan:
-    name: 🔒 Security Scan
+  build:
+    name: Build
     runs-on: ubuntu-latest
+    needs: [test-frontend, test-backend]
     
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - uses: actions/checkout@v4
       
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: ${{ env.NODE_VERSION }}
-        cache: 'npm'
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22.x'
+          
+      - name: Enable Corepack
+        run: corepack enable
         
-    - name: Cache node modules
-      uses: actions/cache@v4
-      with:
-        path: ~/.npm
-        key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
-        restore-keys: |
-          ${{ runner.os }}-node-
+      - name: Install Yarn
+        run: corepack prepare yarn@4.0.2 --activate
         
-    - name: Install dependencies
-      run: npm ci --legacy-peer-deps
-      
-    - name: Run npm audit
-      run: npm audit --audit-level moderate --production || echo "Audit completed with warnings"
-      
-    - name: Run Snyk security scan
-      if: ${{ secrets.SNYK_TOKEN != '' }}
-      uses: snyk/actions/node@master
-      env:
-        SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
-      with:
-        args: --severity-threshold=high --fail-on=upgradable
-    
-    - name: Skip Snyk if no token
-      if: ${{ secrets.SNYK_TOKEN == '' }}
-      run: echo "Skipping Snyk scan - no SNYK_TOKEN configured"
-      
-    - name: Security audit summary
-      run: |
-        echo "## Security Audit Results" >> $GITHUB_STEP_SUMMARY
-        echo "✅ npm audit completed" >> $GITHUB_STEP_SUMMARY
-        echo "$(npm audit --audit-level moderate --production | tail -n 3)" >> $GITHUB_STEP_SUMMARY
+      - name: Install dependencies
+        run: yarn install --immutable
+        
+      - name: Build project
+        run: yarn build
+        
+      - name: Check bundle size
+        run: |
+          cd apps/web
+          yarn check-bundle
+          
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: build-artifacts
+          path: apps/web/dist
 
-  deploy-preview:
-    name: 🚀 Deploy Preview
+  performance:
+    name: Performance Check
     runs-on: ubuntu-latest
-    needs: [lint-and-type-check, build-and-test, python-tests]
-    if: github.event_name == 'pull_request'
+    needs: build
     
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - uses: actions/checkout@v4
       
-    - name: Download build artifacts
-      uses: actions/download-artifact@v4
-      with:
-        name: build-artifacts
-        path: ./artifacts
-        
-    - name: Deploy to preview environment
-      run: |
-        echo "🚀 Deploying to preview environment..."
-        echo "Preview URL would be generated here"
-        echo "Build artifacts size: $(du -sh artifacts)"
-        
-    - name: Comment PR with preview link
-      uses: actions/github-script@v7
-      with:
-        script: |
-          const { data: artifacts } = await github.rest.actions.listWorkflowRunArtifacts({
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-            run_id: context.runId,
-          });
+      - name: Download build artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: build-artifacts
+          path: apps/web/dist
           
-          const buildArtifacts = artifacts.artifacts.find(a => a.name === 'build-artifacts');
-          const performanceReport = artifacts.artifacts.find(a => a.name === 'performance-report');
-          
-          const body = `## 🚀 Preview Deployment
-          
-          ✅ Build completed successfully!
-          
-          ### Artifacts
-          ${buildArtifacts ? `📦 [Build Artifacts](${buildArtifacts.archive_download_url})` : ''}
-          ${performanceReport ? `⚡ [Performance Report](${performanceReport.archive_download_url})` : ''}
-          
-          ### Quick Stats
-          - Build time: ~${{ needs.build-and-test.outputs.build-time || 'N/A' }}
-          - Bundle size: Check performance report for details
-          - Tests: All passing ✅
-          
-          _This is an automated preview deployment._`;
-          
-          github.rest.issues.createComment({
-            issue_number: context.issue.number,
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-            body: body
-          })
+      - name: Run Lighthouse CI
+        uses: treosh/lighthouse-ci-action@v10
+        with:
+          configPath: './.lighthouserc.json'
+          uploadArtifacts: true
+          temporaryPublicStorage: true

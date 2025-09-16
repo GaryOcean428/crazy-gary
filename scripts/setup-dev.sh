@@ -1,143 +1,147 @@
 #!/bin/bash
 
-# Crazy-Gary Development Setup Script
-# This script automates the complete development environment setup
+# Development Environment Setup Script for Crazy Gary
+# Sets up complete development environment with all dependencies
 
 set -e
 
-echo "🚀 Setting up Crazy-Gary development environment..."
+echo "🚀 Setting up Crazy Gary development environment..."
 
-# Check prerequisites
-check_prerequisites() {
-    echo "📋 Checking prerequisites..."
-    
-    if ! command -v node &> /dev/null; then
-        echo "❌ Node.js is required but not installed."
-        echo "Please install Node.js 18+ from https://nodejs.org/"
-        exit 1
-    fi
-    
-    if ! command -v python &> /dev/null; then
-        echo "❌ Python is required but not installed."
-        echo "Please install Python 3.10+ from https://python.org/"
-        exit 1
-    fi
-    
-    if ! command -v docker &> /dev/null; then
-        echo "⚠️  Docker is recommended but not installed."
-        echo "You can install it later for containerized development."
-    fi
-    
-    echo "✅ Prerequisites check completed"
-}
+# Colors
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+RED='\033[0;31m'
+NC='\033[0m'
 
-# Install dependencies
-install_dependencies() {
-    echo "📦 Installing dependencies..."
-    
-    # Install root dependencies
-    echo "Installing root dependencies..."
-    npm install --legacy-peer-deps
-    
-    # Install Python dependencies
-    echo "Installing Python dependencies..."
-    pip install -r requirements.txt
-    
-    # Install API dependencies
-    echo "Installing API dependencies..."
+# Check Node.js version
+echo -e "\n${YELLOW}Checking Node.js version...${NC}"
+NODE_VERSION=$(node -v | cut -d'v' -f2 | cut -d'.' -f1)
+if [ "$NODE_VERSION" -lt 22 ]; then
+    echo -e "${RED}Error: Node.js 22.x or higher is required${NC}"
+    echo "Please install Node.js 22.x from https://nodejs.org/"
+    exit 1
+fi
+echo -e "${GREEN}✅ Node.js version is compatible${NC}"
+
+# Check Python version
+echo -e "\n${YELLOW}Checking Python version...${NC}"
+PYTHON_VERSION=$(python3 --version | cut -d' ' -f2 | cut -d'.' -f1,2)
+REQUIRED_VERSION="3.10"
+if [ "$(printf '%s\n' "$REQUIRED_VERSION" "$PYTHON_VERSION" | sort -V | head -n1)" != "$REQUIRED_VERSION" ]; then
+    echo -e "${RED}Error: Python 3.10 or higher is required${NC}"
+    echo "Please install Python 3.10+ from https://www.python.org/"
+    exit 1
+fi
+echo -e "${GREEN}✅ Python version is compatible${NC}"
+
+# Install Yarn 4
+echo -e "\n${YELLOW}Setting up Yarn 4...${NC}"
+if ! command -v yarn &> /dev/null; then
+    echo "Installing Yarn..."
+    corepack enable
+    corepack prepare yarn@4.0.2 --activate
+fi
+echo -e "${GREEN}✅ Yarn 4 is installed${NC}"
+
+# Remove old node_modules and lockfiles if migrating from npm
+if [ -f "package-lock.json" ]; then
+    echo -e "\n${YELLOW}Migrating from npm to Yarn...${NC}"
+    rm -rf node_modules package-lock.json
+    rm -rf apps/*/node_modules apps/*/package-lock.json
+    rm -rf packages/*/node_modules packages/*/package-lock.json
+    echo -e "${GREEN}✅ Cleaned up npm artifacts${NC}"
+fi
+
+# Install frontend dependencies
+echo -e "\n${YELLOW}Installing frontend dependencies...${NC}"
+yarn install
+echo -e "${GREEN}✅ Frontend dependencies installed${NC}"
+
+# Setup Python virtual environment for backend
+echo -e "\n${YELLOW}Setting up Python environment...${NC}"
+if [ ! -d "apps/api/venv" ]; then
+    echo "Creating Python virtual environment..."
     cd apps/api
-    pip install -r requirements.txt
+    python3 -m venv venv
     cd ../..
-    
-    echo "✅ Dependencies installed"
-}
+fi
 
-# Setup environment
-setup_environment() {
-    echo "🔧 Setting up environment..."
-    
-    if [ ! -f .env ]; then
+# Activate venv and install Python dependencies
+cd apps/api
+source venv/bin/activate
+echo "Installing Python dependencies..."
+pip install --upgrade pip
+if [ -f "requirements-updated.txt" ]; then
+    pip install -r requirements-updated.txt
+else
+    pip install -r requirements.txt
+fi
+deactivate
+cd ../..
+echo -e "${GREEN}✅ Python environment setup complete${NC}"
+
+# Create .env file if it doesn't exist
+if [ ! -f ".env" ]; then
+    echo -e "\n${YELLOW}Creating .env file from example...${NC}"
+    if [ -f ".env.example" ]; then
         cp .env.example .env
-        echo "📝 Created .env file from template"
-        echo "⚠️  Please edit .env file and add your API keys:"
-        echo "   - HUGGINGFACE_API_TOKEN"
-        echo "   - OPENAI_API_KEY"
-        echo "   - OPENROUTER_API_KEY"
-        echo "   - Database credentials"
+        echo -e "${GREEN}✅ Created .env file${NC}"
+        echo -e "${YELLOW}⚠️  Please update .env with your API keys and configuration${NC}"
     else
-        echo "✅ .env file already exists"
+        echo -e "${YELLOW}⚠️  No .env.example found - please create .env manually${NC}"
     fi
-}
-
-# Build packages
-build_packages() {
-    echo "🔨 Building packages..."
-    npm run build
-    echo "✅ Build completed"
-}
-
-# Run tests
-run_tests() {
-    echo "🧪 Running tests..."
-    npm run test
-    echo "✅ Tests completed"
-}
+fi
 
 # Setup git hooks
-setup_git_hooks() {
-    echo "🪝 Setting up git hooks..."
-    
+echo -e "\n${YELLOW}Setting up git hooks...${NC}"
+if [ -d ".git" ]; then
+    # Pre-commit hook
     cat > .git/hooks/pre-commit << 'EOF'
 #!/bin/bash
 echo "Running pre-commit checks..."
-npm run lint
-npm run type-check
-echo "Pre-commit checks passed!"
+yarn lint
+yarn type-check
+yarn test
 EOF
-    
     chmod +x .git/hooks/pre-commit
-    echo "✅ Git hooks configured"
-}
+    echo -e "${GREEN}✅ Git hooks configured${NC}"
+fi
 
-# Print startup instructions
-print_instructions() {
-    echo ""
-    echo "🎉 Development environment setup complete!"
-    echo ""
-    echo "📚 Next steps:"
-    echo "1. Edit .env file with your API keys"
-    echo "2. Start the development servers:"
-    echo ""
-    echo "   # Terminal 1 - API Server"
-    echo "   cd apps/api"
-    echo "   python src/main.py"
-    echo ""
-    echo "   # Terminal 2 - Frontend"
-    echo "   cd apps/web"
-    echo "   npm run dev"
-    echo ""
-    echo "3. Open http://localhost:5173 in your browser"
-    echo ""
-    echo "🔗 Useful commands:"
-    echo "   npm run dev       - Start all services"
-    echo "   npm run build     - Build for production"
-    echo "   npm run test      - Run test suite"
-    echo "   npm run lint      - Run linting"
-    echo ""
-    echo "📖 Documentation available in docs/ directory"
-    echo "🐛 Report issues at: https://github.com/GaryOcean428/crazy-gary/issues"
-}
+# Run initial quality checks
+echo -e "\n${YELLOW}Running initial quality checks...${NC}"
+echo "Running linter..."
+yarn lint:fix || true
+echo "Running type check..."
+yarn type-check || true
+echo "Running tests..."
+yarn test || true
 
-# Main execution
-main() {
-    check_prerequisites
-    install_dependencies
-    setup_environment
-    build_packages
-    run_tests
-    setup_git_hooks
-    print_instructions
-}
+# Database setup instructions
+echo -e "\n${YELLOW}Database Setup${NC}"
+if command -v psql &> /dev/null; then
+    echo -e "${GREEN}✅ PostgreSQL is installed${NC}"
+else
+    echo -e "${YELLOW}⚠️  PostgreSQL not found${NC}"
+    echo "Please install PostgreSQL from https://www.postgresql.org/download/"
+fi
 
-# Run main function
-main "$@"
+# Summary
+echo -e "\n${GREEN}🎉 Development environment setup complete!${NC}"
+echo -e "\nNext steps:"
+echo "1. Update .env with your configuration"
+echo "2. Set up PostgreSQL database"
+echo "3. Run 'yarn dev' to start development servers"
+echo "4. Visit http://localhost:5675 for the frontend"
+echo "5. API will be available at http://localhost:8000"
+echo -e "\n${YELLOW}Available commands:${NC}"
+echo "  yarn dev          - Start development servers"
+echo "  yarn build        - Build for production"
+echo "  yarn test         - Run tests"
+echo "  yarn lint         - Check code quality"
+echo "  yarn type-check   - Check TypeScript types"
+echo "  yarn security     - Run security audit"
+echo "  yarn performance  - Analyze performance"
+
+echo -e "\n${GREEN}Happy coding! 🚀${NC}"
+
+exit 0
