@@ -2,11 +2,11 @@
 import { expect, afterEach, vi } from 'vitest'
 import { cleanup } from '@testing-library/react'
 import * as matchers from '@testing-library/jest-dom/matchers'
-import { toHaveNoViolations } from 'jest-axe'
+// import { toHaveNoViolations } from 'jest-axe'
 
 // Extend Vitest's expect with Testing Library matchers
 expect.extend(matchers)
-expect.extend(toHaveNoViolations)
+// expect.extend(toHaveNoViolations)
 
 // Clean up after each test
 afterEach(() => {
@@ -56,21 +56,31 @@ globalThis.fetch = vi.fn(() =>
   Promise.resolve({
     ok: true,
     status: 200,
+    statusText: 'OK',
+    headers: new Headers(),
+    redirected: false,
+    type: 'basic' as ResponseType,
+    url: '',
+    clone: vi.fn(),
+    body: null,
+    bodyUsed: false,
+    arrayBuffer: () => Promise.resolve(new ArrayBuffer(0)),
     json: () => Promise.resolve({}),
     text: () => Promise.resolve(''),
     blob: () => Promise.resolve(new Blob()),
-  })
-)
+    formData: () => Promise.resolve(new FormData()),
+  } as Response)
+) as typeof fetch
 
 // Mock IntersectionObserver
-global.IntersectionObserver = vi.fn().mockImplementation(() => ({
+;(globalThis as any).IntersectionObserver = vi.fn().mockImplementation(() => ({
   observe: vi.fn(),
   unobserve: vi.fn(),
   disconnect: vi.fn(),
 }))
 
 // Mock ResizeObserver
-global.ResizeObserver = vi.fn().mockImplementation(() => ({
+;(globalThis as any).ResizeObserver = vi.fn().mockImplementation(() => ({
   observe: vi.fn(),
   unobserve: vi.fn(),
   disconnect: vi.fn(),
@@ -89,7 +99,7 @@ Object.defineProperty(window, 'performance', {
 
 // Mock console methods to reduce noise in tests
 const originalConsole = { ...console }
-global.console = {
+;(globalThis as any).console = {
   ...console,
   // Keep these for actual test debugging
   log: originalConsole.log,
@@ -143,12 +153,12 @@ Object.defineProperty(window, 'navigator', {
 })
 
 // Setup global test helpers
-global.testHelpers = {
+;(globalThis as any).testHelpers = {
   // Helper to wait for next tick
   nextTick: () => new Promise(resolve => setTimeout(resolve, 0)),
   
   // Helper to wait for specific time
-  wait: (ms) => new Promise(resolve => setTimeout(resolve, ms)),
+  wait: (ms: number) => new Promise(resolve => setTimeout(resolve, ms)),
   
   // Helper to trigger window resize
   triggerResize: (width = 1024, height = 768) => {
