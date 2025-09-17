@@ -6,17 +6,19 @@ import { fileURLToPath } from 'url'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
+// ✅ RAILWAY FIX: Vite Config optimized for Railway deployment
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react(), tailwindcss()],
+  base: './', // ✅ Relative paths for Railway
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
     },
   },
   server: {
-    host: '0.0.0.0',
-    port: 5173,
+    host: '0.0.0.0', // ✅ Correct host binding
+    port: parseInt(process.env.PORT || '5173'), // ✅ Railway PORT support
     proxy: {
       '/api': {
         target: process.env.VITE_API_URL || 'http://localhost:8000',
@@ -26,16 +28,17 @@ export default defineConfig({
     },
   },
   preview: {
-    host: '0.0.0.0',
-    port: 5173
+    host: '0.0.0.0', // ✅ Correct host binding for Railway
+    port: parseInt(process.env.PORT || '5173') // ✅ Railway PORT support
   },
   build: {
     outDir: 'dist',
     assetsDir: 'assets',
     sourcemap: false,
     emptyOutDir: true,
-    // Performance optimizations
+    // ✅ Railway Performance optimizations
     minify: 'terser',
+    cssCodeSplit: false, // ✅ Ensure CSS is bundled
     terserOptions: {
       compress: {
         drop_console: true,
