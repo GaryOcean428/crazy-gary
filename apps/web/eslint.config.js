@@ -2,13 +2,16 @@ import js from '@eslint/js'
 import globals from 'globals'
 import reactHooks from 'eslint-plugin-react-hooks'
 import reactRefresh from 'eslint-plugin-react-refresh'
+import tseslint from '@typescript-eslint/eslint-plugin'
+import tsParser from '@typescript-eslint/parser'
 
 export default [
-  { ignores: ['dist'] },
+  { ignores: ['dist', 'eslint.config.js', 'vite.config.ts', 'vitest.config.js'] },
   {
-    files: ['**/*.{js,jsx}'],
+    files: ['**/*.{js,jsx,ts,tsx}'],
     languageOptions: {
       ecmaVersion: 2020,
+      parser: tsParser,
       globals: {
         ...globals.browser,
         ...globals.node,
@@ -20,16 +23,20 @@ export default [
         ecmaVersion: 'latest',
         ecmaFeatures: { jsx: true },
         sourceType: 'module',
+        project: ['./tsconfig.json', './tsconfig.node.json'],
       },
     },
     plugins: {
       'react-hooks': reactHooks,
       'react-refresh': reactRefresh,
+      '@typescript-eslint': tseslint,
     },
     rules: {
       ...js.configs.recommended.rules,
       ...reactHooks.configs.recommended.rules,
-      'no-unused-vars': ['error', { 
+      ...tseslint.configs.recommended.rules,
+      'no-unused-vars': 'off',
+      '@typescript-eslint/no-unused-vars': ['error', { 
         varsIgnorePattern: '^[A-Z_]|^React$',
         argsIgnorePattern: '^_'
       }],
@@ -42,10 +49,10 @@ export default [
   // Test files configuration
   {
     files: [
-      '**/*.test.{js,jsx}', 
-      '**/__tests__/**/*.{js,jsx}', 
-      '**/test-setup.js',
-      '**/lib/test-utils.jsx'
+      '**/*.test.{js,jsx,ts,tsx}', 
+      '**/__tests__/**/*.{js,jsx,ts,tsx}', 
+      '**/test-setup.{js,ts}',
+      '**/lib/test-utils.{jsx,tsx}'
     ],
     languageOptions: {
       globals: {
@@ -68,11 +75,12 @@ export default [
       },
     },
     rules: {
-      'no-unused-vars': ['error', { 
+      '@typescript-eslint/no-unused-vars': ['error', { 
         varsIgnorePattern: '^[A-Z_]|^React$',
         argsIgnorePattern: '^_'
       }],
       'react-refresh/only-export-components': 'off',
+      '@typescript-eslint/no-explicit-any': 'off',
     },
   },
 ]
