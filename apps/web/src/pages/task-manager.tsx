@@ -36,10 +36,36 @@ import {
   Settings
 } from 'lucide-react'
 
-export function TaskManager({ setCurrentTask }) {
-  const [tasks, setTasks] = useState([])
+// Task interface definition
+interface Task {
+  id: number
+  title: string
+  description: string
+  status: 'pending' | 'running' | 'completed' | 'failed'
+  priority: 'low' | 'medium' | 'high'
+  model: string
+  created: string
+  completed?: string
+  duration?: string
+  progress?: number
+  result?: string
+}
+
+interface NewTask {
+  title: string
+  description: string
+  priority: 'low' | 'medium' | 'high'
+  model: string
+}
+
+interface TaskManagerProps {
+  setCurrentTask: (task: Task | null) => void
+}
+
+export function TaskManager({ setCurrentTask }: TaskManagerProps) {
+  const [tasks, setTasks] = useState<Task[]>([])
   const [newTaskOpen, setNewTaskOpen] = useState(false)
-  const [newTask, setNewTask] = useState({
+  const [newTask, setNewTask] = useState<NewTask>({
     title: '',
     description: '',
     priority: 'medium',
@@ -94,7 +120,7 @@ export function TaskManager({ setCurrentTask }) {
       return
     }
 
-    const task = {
+    const task: Task = {
       id: Date.now(),
       ...newTask,
       status: 'pending',
@@ -111,7 +137,7 @@ export function TaskManager({ setCurrentTask }) {
     })
   }
 
-  const handleStartTask = async (taskId) => {
+  const handleStartTask = async (taskId: number) => {
     const task = tasks.find(t => t.id === taskId)
     if (!task) return
 
@@ -150,10 +176,10 @@ export function TaskManager({ setCurrentTask }) {
     }, 5000)
   }
 
-  const handleStopTask = (taskId) => {
+  const handleStopTask = (taskId: number) => {
     setTasks(prev => prev.map(t => 
       t.id === taskId 
-        ? { ...t, status: 'stopped', stopped: new Date().toISOString() }
+        ? { ...t, status: 'failed' as const, completed: new Date().toISOString() }
         : t
     ))
     setCurrentTask(null)
@@ -164,7 +190,7 @@ export function TaskManager({ setCurrentTask }) {
     })
   }
 
-  const getStatusIcon = (status) => {
+  const getStatusIcon = (status: Task['status']) => {
     switch (status) {
       case 'running':
         return <Play className="h-4 w-4 text-blue-500" />
@@ -172,24 +198,24 @@ export function TaskManager({ setCurrentTask }) {
         return <CheckCircle className="h-4 w-4 text-green-500" />
       case 'pending':
         return <Clock className="h-4 w-4 text-yellow-500" />
-      case 'stopped':
+      case 'failed':
         return <Square className="h-4 w-4 text-red-500" />
       default:
         return <AlertCircle className="h-4 w-4 text-gray-500" />
     }
   }
 
-  const getStatusBadge = (status) => {
-    const variants = {
+  const getStatusBadge = (status: Task['status']) => {
+    const variants: Record<Task['status'], string> = {
       'running': 'default',
       'completed': 'default',
       'pending': 'secondary',
-      'stopped': 'destructive'
+      'failed': 'destructive'
     }
     return variants[status] || 'secondary'
   }
 
-  const getPriorityColor = (priority) => {
+  const getPriorityColor = (priority: Task['priority']) => {
     switch (priority) {
       case 'high': return 'text-red-500'
       case 'medium': return 'text-yellow-500'
@@ -248,7 +274,7 @@ export function TaskManager({ setCurrentTask }) {
                   <label className="text-sm font-medium">Priority</label>
                   <Select 
                     value={newTask.priority} 
-                    onValueChange={(value) => setNewTask(prev => ({ ...prev, priority: value }))}
+                    onValueChange={(value: string) => setNewTask(prev => ({ ...prev, priority: value as 'low' | 'medium' | 'high' }))}
                   >
                     <SelectTrigger>
                       <SelectValue />
@@ -265,7 +291,7 @@ export function TaskManager({ setCurrentTask }) {
                   <label className="text-sm font-medium">Model</label>
                   <Select 
                     value={newTask.model} 
-                    onValueChange={(value) => setNewTask(prev => ({ ...prev, model: value }))}
+                    onValueChange={(value: string) => setNewTask(prev => ({ ...prev, model: value }))}
                   >
                     <SelectTrigger>
                       <SelectValue />
