@@ -3,7 +3,65 @@
  * Provides reusable patterns for better screen reader support
  */
 
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useEffect, useRef, useState, forwardRef } from 'react'
+
+// Add JSX namespace reference
+/// <reference types="react/jsx-runtime" />
+
+// Type definitions for accessibility components
+interface ScreenReaderOnlyProps {
+  children: React.ReactNode
+  as?: React.ElementType
+}
+
+interface VisuallyHiddenProps {
+  children: React.ReactNode
+  [key: string]: any
+}
+
+interface LiveRegionProps {
+  children: React.ReactNode
+  _politeness?: 'polite' | 'assertive' | 'off'
+  atomic?: boolean
+  relevant?: string
+}
+
+interface AnnouncementProps {
+  message: string
+  politeness?: 'polite' | 'assertive'
+}
+
+interface FocusManagementProps {
+  children: React.ReactNode
+}
+
+interface AccessibleButtonProps {
+  children: React.ReactNode
+  variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'destructive'
+  size?: 'small' | 'medium' | 'large' | 'icon'
+  loading?: boolean
+  disabled?: boolean
+  ariaLabel?: string
+  ariaDescribedBy?: string
+  onClick?: () => void
+  type?: 'button' | 'submit' | 'reset'
+  className?: string
+}
+
+interface FormFieldProps {
+  label: string
+  children: React.ReactNode
+  error?: string
+  help?: string
+  required?: boolean
+  id: string
+  className?: string
+}
+
+interface KeyboardNavigationOptions {
+  orientation?: 'horizontal' | 'vertical'
+  loop?: boolean
+}
 
 // Skip to main content link
 export const SkipToMain = () => (
@@ -16,14 +74,13 @@ export const SkipToMain = () => (
 )
 
 // Screen reader only text
-export const ScreenReaderOnly = ({ children, as: _Component = 'span' }) => (
-  <_Component className="sr-only">
-    {children}
-  </_Component>
-)
+export const ScreenReaderOnly: React.FC<ScreenReaderOnlyProps> = ({ children, as = 'span' }) => {
+  const Component = as
+  return React.createElement(Component, { className: "sr-only" }, children)
+}
 
 // Visually hidden but accessible to screen readers
-export const VisuallyHidden = ({ children, ...props }) => (
+export const VisuallyHidden: React.FC<VisuallyHiddenProps> = ({ children, ...props }) => (
   <span
     className="absolute w-px h-px p-0 -m-px overflow-hidden whitespace-nowrap border-0"
     style={{
@@ -37,10 +94,10 @@ export const VisuallyHidden = ({ children, ...props }) => (
 )
 
 // Focus trap for modals and dialogs
-export const FocusTrap = ({ children, active = true }) => {
-  const containerRef = useRef(null)
-  const firstFocusableRef = useRef(null)
-  const lastFocusableRef = useRef(null)
+export const FocusTrap: React.FC<FocusManagementProps & { active?: boolean }> = ({ children, active = true }) => {
+  const containerRef = useRef<HTMLDivElement>(null)
+  const firstFocusableRef = useRef<HTMLElement>(null)
+  const lastFocusableRef = useRef<HTMLElement>(null)
 
   useEffect(() => {
     if (!active || !containerRef.current) return
@@ -52,10 +109,10 @@ export const FocusTrap = ({ children, active = true }) => {
 
     if (focusableElements.length === 0) return
 
-    firstFocusableRef.current = focusableElements[0]
-    lastFocusableRef.current = focusableElements[focusableElements.length - 1]
+    firstFocusableRef.current = focusableElements[0] as HTMLElement
+    lastFocusableRef.current = focusableElements[focusableElements.length - 1] as HTMLElement
 
-    const handleKeyDown = (e) => {
+    const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key !== 'Tab') return
 
       if (e.shiftKey) {
@@ -87,15 +144,17 @@ export const FocusTrap = ({ children, active = true }) => {
 }
 
 // Live region for announcing dynamic content changes
-export const LiveRegion = ({ 
+export const LiveRegion: React.FC<LiveRegionProps> = ({ 
   children, 
   _politeness = 'polite',
   atomic = false,
   relevant = 'additions text'
 }) => {
+  const ariaLiveValue: "off" | "polite" | "assertive" = _politeness as "off" | "polite" | "assertive"
+  
   return (
     <div
-      aria-live={_politeness}
+      aria-live={ariaLiveValue}
       aria-atomic={atomic}
       aria-relevant={relevant}
       className="sr-only"
@@ -109,7 +168,7 @@ export const LiveRegion = ({
 export const useAnnouncements = () => {
   const [announcement, setAnnouncement] = useState('')
 
-  const announce = React.useCallback((message, _politeness = 'polite') => {
+  const announce = React.useCallback((message: string, _politeness: 'polite' | 'assertive' = 'polite') => {
     setAnnouncement('')
     setTimeout(() => {
       setAnnouncement(message)
@@ -120,7 +179,7 @@ export const useAnnouncements = () => {
     announcement,
     announce,
     LiveRegion: () => announcement ? (
-      <LiveRegion politeness="polite">
+      <LiveRegion _politeness="polite">
         {announcement}
       </LiveRegion>
     ) : null
@@ -129,23 +188,25 @@ export const useAnnouncements = () => {
 
 // Hook for managing focus
 export const useFocusManagement = () => {
-  const [focusedElement, setFocusedElement] = useState(null)
+  const [focusedElement, setFocusedElement] = useState<Element | null>(null)
 
   const saveFocus = React.useCallback(() => {
     setFocusedElement(document.activeElement)
   }, [])
 
   const restoreFocus = React.useCallback(() => {
-    if (focusedElement && typeof focusedElement.focus === 'function') {
-      focusedElement.focus()
+    if (focusedElement && 'focus' in focusedElement && typeof focusedElement.focus === 'function') {
+      (focusedElement as HTMLElement).focus()
     }
   }, [focusedElement])
 
-  const focusFirst = React.useCallback((container) => {
+  const focusFirst = React.useCallback((container: HTMLElement | null) => {
     const focusableElement = container?.querySelector(
       'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
     )
-    focusableElement?.focus()
+    if (focusableElement && 'focus' in focusableElement) {
+      (focusableElement as HTMLElement).focus()
+    }
   }, [])
 
   return {
@@ -156,7 +217,7 @@ export const useFocusManagement = () => {
 }
 
 // Accessible button component with proper ARIA attributes
-export const AccessibleButton = React.forwardRef(({
+export const AccessibleButton = React.forwardRef<HTMLButtonElement, AccessibleButtonProps>(({
   children,
   variant = 'primary',
   size = 'medium',
@@ -171,7 +232,7 @@ export const AccessibleButton = React.forwardRef(({
 }, ref) => {
   const baseClasses = 'inline-flex items-center justify-center rounded-md font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50'
   
-  const variantClasses = {
+  const variantClasses: Record<string, string> = {
     primary: 'bg-primary text-primary-foreground hover:bg-primary/90',
     secondary: 'bg-secondary text-secondary-foreground hover:bg-secondary/80',
     outline: 'border border-input bg-background hover:bg-accent hover:text-accent-foreground',
@@ -179,7 +240,7 @@ export const AccessibleButton = React.forwardRef(({
     destructive: 'bg-destructive text-destructive-foreground hover:bg-destructive/90'
   }
   
-  const sizeClasses = {
+  const sizeClasses: Record<string, string> = {
     small: 'h-9 px-3 text-sm',
     medium: 'h-10 px-4 py-2',
     large: 'h-11 px-8 text-lg',
@@ -209,7 +270,7 @@ export const AccessibleButton = React.forwardRef(({
 AccessibleButton.displayName = 'AccessibleButton'
 
 // Accessible form field with proper labeling
-export const AccessibleField = ({
+export const AccessibleField: React.FC<FormFieldProps> = ({
   label,
   required = false,
   error,
@@ -236,7 +297,7 @@ export const AccessibleField = ({
         )}
       </label>
       
-      {React.cloneElement(children, {
+      {React.cloneElement(children as React.ReactElement, {
         id: fieldId,
         'aria-invalid': !!error,
         'aria-describedby': [errorId, helpId].filter(Boolean).join(' ') || undefined,
@@ -259,11 +320,11 @@ export const AccessibleField = ({
 }
 
 // Hook for keyboard navigation
-export const useKeyboardNavigation = (items, options = {}) => {
+export const useKeyboardNavigation = (items: any[], options: KeyboardNavigationOptions = {}) => {
   const { orientation = 'vertical', loop = true } = options
   const [activeIndex, setActiveIndex] = useState(0)
   
-  const handleKeyDown = React.useCallback((e) => {
+  const handleKeyDown = React.useCallback((e: KeyboardEvent) => {
     const isVertical = orientation === 'vertical'
     const nextKey = isVertical ? 'ArrowDown' : 'ArrowRight'
     const prevKey = isVertical ? 'ArrowUp' : 'ArrowLeft'
