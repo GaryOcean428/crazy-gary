@@ -1,4 +1,24 @@
 {
   "name": "crazy-gary",
-  "packageManager": "yarn@4.9.4"
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "packageManager": "yarn@4.9.4",
+  "scripts": {
+    "dev": "yarn workspace @crazy-gary/web dev",
+    "build": "yarn workspace @crazy-gary/web build",
+    "test": "yarn workspace @crazy-gary/web test",
+    "test:coverage": "yarn workspace @crazy-gary/web test:coverage",
+    "lint": "yarn workspace @crazy-gary/web lint",
+    "lint:fix": "yarn workspace @crazy-gary/web lint:fix",
+    "type-check": "yarn workspace @crazy-gary/web type-check",
+    "format": "yarn workspace @crazy-gary/web format",
+    "format:check": "yarn workspace @crazy-gary/web format:check",
+    "check-bundle": "yarn workspace @crazy-gary/web check-bundle"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.0"
+  }
 }
