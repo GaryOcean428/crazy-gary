@@ -1,5 +1,7 @@
 # 🚀 Railway Deployment Guide for Crazy-Gary
 
+> **📖 For comprehensive troubleshooting and best practices, see [RAILWAY_DEPLOYMENT_CHEAT_SHEET.md](./RAILWAY_DEPLOYMENT_CHEAT_SHEET.md)**
+
 ## 📋 **Step-by-Step Deployment Process**
 
 ### **1. Create New Project**
@@ -142,11 +144,15 @@ Configure your MCP service API keys:
 
 ## 🛠️ **Troubleshooting**
 
+> **📖 For comprehensive troubleshooting guide with 6 major Railway deployment issues and solutions, see [RAILWAY_DEPLOYMENT_CHEAT_SHEET.md](./RAILWAY_DEPLOYMENT_CHEAT_SHEET.md)**
+
 ### **Common Issues:**
 1. **Build Failures**: Check that `requirements.txt` is in the root
 2. **Port Issues**: Ensure `PORT=3000` and `HOST=0.0.0.0`
 3. **Database Errors**: Verify `DATABASE_URL` is set correctly
 4. **API Key Errors**: Check all environment variables are set
+5. **Theme/CSS Issues**: See cheat sheet for FOUC prevention
+6. **Reference Variable Mistakes**: Use `RAILWAY_PUBLIC_DOMAIN` not `PORT`
 
 ### **Logs to Check:**
 - Build logs for dependency installation issues

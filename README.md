@@ -176,7 +176,12 @@ npm run format       # Code formatting
 
 ## 🚢 **Deployment**
 
-This project is optimized for deployment on **Railway**. A comprehensive deployment guide is available in `RAILWAY_DEPLOYMENT.md`.
+This project is optimized for deployment on **Railway**. 
+
+> **🔥 NEW: Railway Deployment Master Cheat Sheet!**  
+> **📖 See [RAILWAY_DEPLOYMENT_CHEAT_SHEET.md](./RAILWAY_DEPLOYMENT_CHEAT_SHEET.md) for comprehensive troubleshooting of the 6 most common Railway deployment issues and their solutions.**
+
+A comprehensive deployment guide is available in `RAILWAY_DEPLOYMENT.md`.
 
 Key steps:
 1. Connect your GitHub repository to a new Railway project.
@@ -184,7 +189,7 @@ Key steps:
 3. Add a PostgreSQL database service.
 4. Configure all required environment variables in the Railway dashboard.
 
-Railway will automatically build and deploy the application using the provided `railway.json` configuration.
+Railway will automatically build and deploy the application using the provided `railpack.json` configurations.
 
 ## 📖 **Usage**
 
