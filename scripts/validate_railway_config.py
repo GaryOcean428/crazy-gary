@@ -2,6 +2,7 @@
 """
 Railway Configuration Validator
 Validates environment variables and configurations for Railway deployment
+Based on Railway Deployment Master Cheat Sheet (RAILWAY_DEPLOYMENT_CHEAT_SHEET.md)
 """
 
 import os
@@ -169,6 +170,47 @@ class ConfigValidator:
                 return False
                 
         return True
+    
+    def check_build_conflicts(self) -> bool:
+        """Check for competing build configurations (cheat sheet issue #1)"""
+        competing_files = ['Dockerfile', 'railway.toml', 'nixpacks.toml']
+        found_conflicts = []
+        
+        for file in competing_files:
+            if os.path.exists(file):
+                found_conflicts.append(file)
+        
+        if found_conflicts:
+            self.warnings.append(f"Found competing build configs: {', '.join(found_conflicts)}. Consider using only railpack.json for Railway deployment")
+        
+        return True  # Not an error, just a warning
+    
+    def check_theme_configuration(self) -> bool:
+        """Check for proper theme configuration to prevent FOUC (cheat sheet issue #3)"""
+        main_tsx_path = 'apps/web/src/main.tsx'
+        if os.path.exists(main_tsx_path):
+            try:
+                with open(main_tsx_path, 'r') as f:
+                    content = f.read()
+                    if 'document.documentElement.className' not in content:
+                        self.warnings.append("Theme not applied before React renders - may cause FOUC (Flash of Unstyled Content)")
+                        return False
+            except Exception as e:
+                self.warnings.append(f"Could not check theme configuration: {e}")
+                return False
+        
+        # Check for proper CSS import order
+        index_css_path = 'apps/web/src/index.css'
+        if os.path.exists(index_css_path):
+            try:
+                with open(index_css_path, 'r') as f:
+                    content = f.read()
+                    if not content.strip():
+                        self.warnings.append("index.css is empty - ensure proper CSS imports for Railway deployment")
+            except Exception as e:
+                self.warnings.append(f"Could not check CSS configuration: {e}")
+        
+        return True
 
     def run_validation(self) -> Tuple[bool, Dict]:
         """Run all validations and return results"""
@@ -181,7 +223,9 @@ class ConfigValidator:
             ("Environment Variables", self.validate_environment_variables),
             ("Database Configuration", self.validate_database_configuration),
             ("Security Configuration", self.validate_security_configuration),
-            ("Railpack Configuration", self.check_railpack_config)
+            ("Railpack Configuration", self.check_railpack_config),
+            ("Build Conflicts", self.check_build_conflicts),
+            ("Theme Configuration", self.check_theme_configuration)
         ]
         
         all_passed = True
