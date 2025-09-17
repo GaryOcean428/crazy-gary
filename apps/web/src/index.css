@@ -1,0 +1,11 @@
+/* ✅ RAILWAY FIX: Proper CSS import order for Railway deployment */
+@import "./App.css";
+
+/* Critical theme styles loaded early to prevent FOUC */
+.dark {
+  color-scheme: dark;
+}
+
+.light {
+  color-scheme: light;
+}

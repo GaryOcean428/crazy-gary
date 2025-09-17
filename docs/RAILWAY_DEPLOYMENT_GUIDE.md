@@ -1,5 +1,8 @@
 # Railway Deployment Guide for crazy-gary
 
+> **🔥 NEW: Railway Deployment Master Cheat Sheet Available!**  
+> **📖 See [RAILWAY_DEPLOYMENT_CHEAT_SHEET.md](../RAILWAY_DEPLOYMENT_CHEAT_SHEET.md) for comprehensive troubleshooting of the 6 most common Railway deployment issues and their solutions.**
+
 This guide provides step-by-step instructions for deploying the crazy-gary application to Railway.com with optimal configuration and security.
 
 ## Prerequisites
