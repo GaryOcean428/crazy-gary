@@ -99,7 +99,51 @@ test_endpoint "$API_URL/api/endpoints/status" "200" "Endpoints status"
 test_endpoint "$API_URL/api/monitoring/health" "200" "Monitoring health"
 
 echo ""
-echo "🔍 Async Route Testing"
+echo "🔧 Railway Configuration Validation"
+echo "-----------------------------------"
+echo -n "Root railpack.json syntax: "
+if cat railpack.json | python -m json.tool > /dev/null 2>&1; then
+    echo -e "${GREEN}✅ VALID${NC}"
+else
+    echo -e "${RED}❌ INVALID${NC}"
+fi
+
+echo -n "API railpack.json syntax: "
+if cat apps/api/railpack.json | python -m json.tool > /dev/null 2>&1; then
+    echo -e "${GREEN}✅ VALID${NC}"
+else
+    echo -e "${RED}❌ INVALID${NC}"
+fi
+
+echo -n "Procfile/railpack alignment: "
+PROCFILE_CMD=$(grep "hypercorn" Procfile 2>/dev/null || echo "")
+RAILPACK_CMD=$(grep -o "hypercorn[^\"]*" railpack.json 2>/dev/null || echo "")
+if [[ -n "$PROCFILE_CMD" && -n "$RAILPACK_CMD" ]]; then
+    echo -e "${GREEN}✅ ALIGNED${NC}"
+else
+    echo -e "${YELLOW}⚠️  CHECK REQUIRED${NC}"
+fi
+
+echo -n "Flask-CORS configuration: "
+if grep -q "methods=" apps/api/src/main.py && ! grep -q "allow_methods=" apps/api/src/main.py; then
+    echo -e "${GREEN}✅ UPDATED${NC} (using 'methods')"
+else
+    echo -e "${RED}❌ DEPRECATED${NC} (using 'allow_methods')"
+fi
+
+echo -n "Frontend setup module: "
+if [ -f "apps/api/src/utils/frontend_setup.py" ]; then
+    echo -e "${GREEN}✅ EXISTS${NC}"
+else
+    echo -e "${RED}❌ MISSING${NC}"
+fi
+
+echo -n "Run server script: "
+if [ -f "run_server.py" ]; then
+    echo -e "${GREEN}✅ EXISTS${NC}"
+else
+    echo -e "${RED}❌ MISSING${NC}"
+fi
 echo "----------------------"
 # These might fail due to missing API keys but should not throw coroutine errors
 echo -n "Testing async heavy route (no auth): "

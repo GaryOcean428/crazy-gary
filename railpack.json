@@ -1,8 +1,8 @@
 {
   "version": "1",
   "metadata": {
-    "name": "monkey-coder",
-    "description": "Advanced AI-powered coding assistant with React frontend and FastAPI backend"
+    "name": "crazy-gary",
+    "description": "Heavy-powered autonomous agentic AI system"
   },
   "build": {
     "provider": "python",
@@ -28,8 +28,8 @@
     }
   },
   "deploy": {
-    "startCommand": "python run_server.py",
-    "healthCheckPath": "/health",
+    "startCommand": "cd apps/api && hypercorn --bind 0.0.0.0:$PORT --workers 2 --access-logfile - --error-logfile - src.main:app",
+    "healthCheckPath": "/api/health",
     "healthCheckTimeout": 300,
     "restartPolicyType": "ON_FAILURE",
     "restartPolicyMaxRetries": 3
