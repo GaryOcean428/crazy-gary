@@ -131,58 +131,9 @@ def health_check():
 
 @app.route('/api/health')
 def api_health_check():
-    """Enhanced health check for API monitoring"""
-    try:
-        import psutil
-        import redis
-        import psycopg2
-        
-        checks = {
-            "status": "healthy",
-            "timestamp": time.time(),
-            "memory_percent": psutil.virtual_memory().percent,
-            "cpu_percent": psutil.cpu_percent(interval=1),
-            "flask_async": True,  # We now support async
-            "server_type": "hypercorn_asgi"
-        }
-        
-        # Check Redis connection
-        try:
-            redis_url = os.getenv('REDIS_URL')
-            if redis_url:
-                r = redis.from_url(redis_url)
-                r.ping()
-                checks["redis"] = "connected"
-            else:
-                checks["redis"] = "not_configured"
-        except Exception as e:
-            checks["redis"] = f"disconnected: {str(e)}"
-            checks["status"] = "degraded"
-        
-        # Check PostgreSQL connection
-        try:
-            db_url = os.getenv('DATABASE_URL')
-            if db_url:
-                conn = psycopg2.connect(db_url)
-                conn.close()
-                checks["postgres"] = "connected"
-            else:
-                checks["postgres"] = "sqlite_fallback"
-        except Exception as e:
-            checks["postgres"] = f"disconnected: {str(e)}"
-            checks["status"] = "degraded"
-        
-        status_code = 200 if checks["status"] == "healthy" else 503
-        return checks, status_code
-        
-    except ImportError:
-        # Fallback if monitoring packages not available
-        return {
-            "status": "healthy", 
-            "service": "crazy-gary-api",
-            "flask_async": True,
-            "server_type": "hypercorn_asgi"
-        }, 200
+    """Simple health check for Railway deployment"""
+    from datetime import datetime
+    return {'status': 'healthy', 'service': 'crazy-gary', 'timestamp': datetime.utcnow().isoformat()}, 200
 
 @app.route('/health/ready')
 def readiness_check():
