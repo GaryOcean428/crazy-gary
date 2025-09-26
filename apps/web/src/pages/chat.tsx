@@ -38,6 +38,9 @@ import {
   ImageIcon,
   Paperclip,
   Activity,
+  CheckCircle,
+  AlertCircle,
+  Clock,
   Cpu
 } from '@/lib/icons'
 

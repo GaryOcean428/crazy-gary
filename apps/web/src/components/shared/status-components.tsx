@@ -75,7 +75,7 @@ export function SystemMetricCard({ title, value, percentage, icon: _IconComponen
     <div className="p-4 rounded-lg border bg-card">
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center space-x-2">
-          <IconComponent className="w-4 h-4 text-muted-foreground" />
+          <_IconComponent className="w-4 h-4 text-muted-foreground" />
           <span className="text-sm font-medium">{title}</span>
         </div>
         {trend !== undefined && (

@@ -3,7 +3,7 @@
  * Provides reusable patterns for better screen reader support
  */
 
-import React, { useEffect, useRef, useState, forwardRef } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 
 // Add JSX namespace reference
 /// <reference types="react/jsx-runtime" />

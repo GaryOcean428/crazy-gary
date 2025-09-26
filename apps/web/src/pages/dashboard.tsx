@@ -22,7 +22,9 @@ import {
   CheckCircle,
   Cpu,
   HardDrive,
-  Network
+  Network,
+  Clock,
+  Play
 } from '@/lib/icons'
 import { 
   formatSystemStats
@@ -198,7 +200,6 @@ export function Dashboard() {
     }
   }
 
-  // eslint-disable-next-line no-unused-vars
   const StatCard = ({ title, value, change, icon: Icon, trend = 'up' }) => (
     <Card className="group hover:shadow-lg transition-all duration-300 border-border/50 hover:border-primary/20">
       <CardContent className="p-6">
