@@ -16,7 +16,8 @@
     "type-check": "yarn workspace @crazy-gary/web type-check",
     "format": "yarn workspace @crazy-gary/web format",
     "format:check": "yarn workspace @crazy-gary/web format:check",
-    "check-bundle": "yarn workspace @crazy-gary/web check-bundle"
+    "check-bundle": "yarn workspace @crazy-gary/web check-bundle",
+    "validate:railway": "python scripts/validate_railway_config.py"
   },
   "devDependencies": {
     "typescript": "^5.5.0"
