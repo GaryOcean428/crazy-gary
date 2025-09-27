@@ -1,16 +1,19 @@
 /**
- * Dynamic Dashboard Control Panel - Phase II Vision Component
+ * Dynamic Dashboard Control Panel
  * 
- * This component exemplifies the Phase II vision of creating a seamless, elegant, 
- * and powerful user experience. It serves as the flagship implementation of:
+ * Advanced dashboard component that provides real-time data visualization,
+ * interactive filtering, and customizable layouts. This component serves as
+ * the main dashboard interface for comprehensive data analysis and monitoring.
  * 
- * - Advanced Functionality: Real-time filtering, data visualization, conditional routing
- * - Architectural Resilience: Async processing, robust state management, micro-interactions
- * - User-Driven Design: Customizable layouts, saved templates, usage analytics
+ * Features:
+ * - Real-time data filtering with complex conditional logic
+ * - Interactive visualizations with live metric updates  
+ * - Customizable dashboard layouts (grid, flex, masonry)
+ * - Template system for saving/loading configurations
+ * - Advanced personalization with themes and preferences
  * 
- * The component is designed as a building block that empowers users to create
- * unique workflows and solutions through an interface that feels like an
- * extension of their thought process.
+ * The component is designed as a flexible building block that empowers users
+ * to create unique workflows and data analysis solutions.
  */
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react'
@@ -43,48 +46,8 @@ import {
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useToast } from '@/hooks/use-toast'
-
-// Type definitions for our advanced dashboard system
-interface DashboardConfig {
-  id: string
-  name: string
-  layout: 'grid' | 'flex' | 'masonry'
-  filters: FilterConfig[]
-  visualizations: VisualizationConfig[]
-  realTimeEnabled: boolean
-  refreshInterval: number
-  theme: 'light' | 'dark' | 'auto'
-  customizations: Record<string, unknown>
-}
-
-interface FilterConfig {
-  id: string
-  type: 'text' | 'select' | 'range' | 'date' | 'boolean'
-  field: string
-  label: string
-  value: unknown
-  options?: string[]
-  condition: 'equals' | 'contains' | 'greater' | 'less' | 'between'
-  enabled: boolean
-}
-
-interface VisualizationConfig {
-  id: string
-  type: 'chart' | 'metric' | 'table' | 'heatmap'
-  title: string
-  data: unknown[]
-  position: { x: number; y: number }
-  size: { width: number; height: number }
-  config: Record<string, unknown>
-}
-
-interface MetricData {
-  label: string
-  value: number
-  change: number
-  trend: 'up' | 'down' | 'stable'
-  color: string
-}
+import type { DashboardConfig, FilterConfig, VisualizationConfig, MetricData } from '../types'
+import { useRealtimeMetrics, useDashboardTemplates, useDashboardFilters } from '../hooks'
 
 export function DynamicDashboardControls() {
   // State management for the dashboard configuration
@@ -101,100 +64,43 @@ export function DynamicDashboardControls() {
   })
 
   const [activeTab, setActiveTab] = useState('overview')
-  const [isLoading, setIsLoading] = useState(false)
-  const [realTimeData, setRealTimeData] = useState<MetricData[]>([])
-  const [savedTemplates, setSavedTemplates] = useState<DashboardConfig[]>([])
   const [filterPanelOpen, setFilterPanelOpen] = useState(false)
   
   const { toast } = useToast()
+  
+  // Use custom hooks for business logic separation
+  const realTimeData = useRealtimeMetrics(config.realTimeEnabled, config.refreshInterval)
+  const { savedTemplates, saveTemplate, loadTemplate } = useDashboardTemplates()
+  const { isLoading, applyFilters } = useDashboardFilters()
 
-  // Simulated real-time metrics - in production, this would connect to actual data sources
-  const generateMockMetrics = useCallback((): MetricData[] => [
-    {
-      label: 'Active Tasks',
-      value: Math.floor(Math.random() * 50) + 10,
-      change: (Math.random() - 0.5) * 20,
-      trend: Math.random() > 0.5 ? 'up' : 'down',
-      color: 'text-blue-600'
-    },
-    {
-      label: 'Completion Rate',
-      value: Math.floor(Math.random() * 30) + 70,
-      change: (Math.random() - 0.5) * 10,
-      trend: Math.random() > 0.3 ? 'up' : 'down',
-      color: 'text-green-600'
-    },
-    {
-      label: 'Response Time',
-      value: Math.floor(Math.random() * 500) + 100,
-      change: (Math.random() - 0.5) * 100,
-      trend: Math.random() > 0.4 ? 'down' : 'up', // Lower is better for response time
-      color: 'text-orange-600'
-    },
-    {
-      label: 'Error Rate',
-      value: Math.random() * 5,
-      change: (Math.random() - 0.5) * 2,
-      trend: Math.random() > 0.6 ? 'down' : 'up', // Lower is better for errors
-      color: 'text-red-600'
-    }
-  ], [])
+  // Save dashboard configuration with user preferences
+  const saveDashboardTemplate = useCallback(async () => {
+    const newTemplate = saveTemplate(config)
+    toast({
+      title: "Template Saved",
+      description: `Dashboard saved as "${newTemplate.name}"`,
+    })
+  }, [config, saveTemplate, toast])
 
-  // Real-time data updates with smooth animations
-  useEffect(() => {
-    if (!config.realTimeEnabled) return
+  // Load dashboard template with smooth transitions
+  const loadDashboardTemplate = useCallback((template: DashboardConfig) => {
+    setConfig(loadTemplate(template))
+    toast({
+      title: "Template Loaded",
+      description: `Loaded "${template.name}" configuration`,
+    })
+  }, [loadTemplate, toast])
 
-    const interval = setInterval(() => {
-      setRealTimeData(generateMockMetrics())
-    }, config.refreshInterval)
-
-    return () => clearInterval(interval)
-  }, [config.realTimeEnabled, config.refreshInterval, generateMockMetrics])
-
-  // Advanced filtering logic with conditional routing
-  const applyFilters = useCallback(async (filters: FilterConfig[]) => {
-    setIsLoading(true)
-    
-    // Simulate async filtering with complex conditions
-    await new Promise(resolve => setTimeout(resolve, 800))
-    
-    const activeFilters = filters.filter(f => f.enabled)
-    
+  // Apply filters with toast notification
+  const handleApplyFilters = useCallback(async (filters: FilterConfig[]) => {
+    const activeFilters = await applyFilters(filters)
     if (activeFilters.length > 0) {
       toast({
         title: "Filters Applied",
         description: `${activeFilters.length} filter(s) applied successfully`,
       })
     }
-    
-    setIsLoading(false)
-  }, [toast])
-
-  // Save dashboard configuration with user preferences
-  const saveDashboardTemplate = useCallback(async () => {
-    const templateName = `Dashboard ${savedTemplates.length + 1}`
-    const newTemplate: DashboardConfig = {
-      ...config,
-      id: `template-${Date.now()}`,
-      name: templateName
-    }
-    
-    setSavedTemplates(prev => [...prev, newTemplate])
-    
-    toast({
-      title: "Template Saved",
-      description: `Dashboard saved as "${templateName}"`,
-    })
-  }, [config, savedTemplates, toast])
-
-  // Load dashboard template with smooth transitions
-  const loadTemplate = useCallback((template: DashboardConfig) => {
-    setConfig(template)
-    toast({
-      title: "Template Loaded",
-      description: `Loaded "${template.name}" configuration`,
-    })
-  }, [toast])
+  }, [applyFilters, toast])
 
   // Memoized calculations for performance optimization
   const metrics = useMemo(() => {
@@ -336,7 +242,7 @@ export function DynamicDashboardControls() {
                     <Label htmlFor="real-time-filtering">Real-time filtering</Label>
                   </div>
                   
-                  <Button onClick={() => applyFilters(config.filters)} disabled={isLoading}>
+                  <Button onClick={() => handleApplyFilters(config.filters)} disabled={isLoading}>
                     {isLoading ? (
                       <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
                     ) : (
@@ -588,7 +494,7 @@ export function DynamicDashboardControls() {
                           <div className="flex gap-2">
                             <Button 
                               size="sm" 
-                              onClick={() => loadTemplate(template)}
+                              onClick={() => loadDashboardTemplate(template)}
                               className="flex-1"
                             >
                               Load
