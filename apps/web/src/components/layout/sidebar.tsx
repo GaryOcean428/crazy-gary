@@ -13,7 +13,8 @@ import {
   ChevronLeft,
   ChevronRight,
   MessageSquare,
-  Activity
+  Activity,
+  BarChart3
 } from 'lucide-react'
 
 const navigation = [
@@ -52,6 +53,12 @@ const navigation = [
     href: '/tools',
     icon: Wrench,
     description: 'Discover and use MCP tools'
+  },
+  {
+    name: 'Phase II Dashboard',
+    href: '/phase2',
+    icon: BarChart3,
+    description: 'Advanced dashboard controls (Phase II)'
   },
   {
     name: 'Monitoring',
