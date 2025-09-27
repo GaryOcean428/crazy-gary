@@ -14,7 +14,7 @@ import { Heavy } from '@/pages/heavy'
 import { Login } from '@/pages/login'
 import { Register } from '@/pages/register'
 import { Monitoring } from '@/pages/monitoring'
-import { DynamicDashboardControls } from '@/components/phase2/DynamicDashboardControls'
+import { DynamicDashboardControls } from '@/features/dashboard'
 import { AuthProvider } from '@/contexts/auth-context'
 import { ProtectedRoute } from '@/components/protected-route'
 import type { Task } from '@/types'
@@ -79,7 +79,7 @@ function ProtectedApp() {
             <Route path="/tools" element={<MCPTools />} />
             <Route path="/monitoring" element={<Monitoring />} />
             <Route path="/settings" element={<Settings />} />
-            <Route path="/phase2" element={<DynamicDashboardControls />} />
+            <Route path="/dashboard/advanced" element={<DynamicDashboardControls />} />
           </Routes>
         </main>
       </div>

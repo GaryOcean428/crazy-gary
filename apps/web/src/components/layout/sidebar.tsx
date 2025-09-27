@@ -55,10 +55,10 @@ const navigation = [
     description: 'Discover and use MCP tools'
   },
   {
-    name: 'Phase II Dashboard',
-    href: '/phase2',
+    name: 'Advanced Dashboard',
+    href: '/dashboard/advanced',
     icon: BarChart3,
-    description: 'Advanced dashboard controls (Phase II)'
+    description: 'Advanced dashboard controls and analytics'
   },
   {
     name: 'Monitoring',
