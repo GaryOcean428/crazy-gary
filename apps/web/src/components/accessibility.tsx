@@ -16,7 +16,7 @@ interface ScreenReaderOnlyProps {
 
 interface VisuallyHiddenProps {
   children: React.ReactNode
-  [key: string]: any
+  [key: string]: unknown
 }
 
 interface LiveRegionProps {
@@ -320,7 +320,7 @@ export const AccessibleField: React.FC<FormFieldProps> = ({
 }
 
 // Hook for keyboard navigation
-export const useKeyboardNavigation = (items: any[], options: KeyboardNavigationOptions = {}) => {
+export const useKeyboardNavigation = (items: unknown[], options: KeyboardNavigationOptions = {}) => {
   const { orientation = 'vertical', loop = true } = options
   const [activeIndex, setActiveIndex] = useState(0)
   

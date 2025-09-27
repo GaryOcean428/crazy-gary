@@ -24,7 +24,7 @@ export const useDebounce = <T,>(value: T, delay: number): T => {
 }
 
 // Throttle hook for scroll/resize events
-export const useThrottle = <T extends (...args: any[]) => any,>(callback: T, delay: number) => {
+export const useThrottle = <T extends (...args: unknown[]) => unknown,>(callback: T, delay: number) => {
   const lastRun = useRef(Date.now())
 
   return useCallback((...args: Parameters<T>) => {
@@ -107,7 +107,7 @@ export const LazyImage: React.FC<LazyImageProps> = ({
 
 // Virtual scrolling hook for large lists
 interface UseVirtualScrollProps {
-  items: any[];
+  items: unknown[];
   itemHeight: number;
   containerHeight: number;
   overscan?: number;
@@ -157,10 +157,10 @@ export const useVirtualScroll = ({
 
 // Virtual list component
 interface VirtualListProps {
-  items: any[];
+  items: unknown[];
   itemHeight: number;
   height: number;
-  renderItem: (item: any, index: number) => ReactNode;
+  renderItem: (item: unknown, index: number) => ReactNode;
   className?: string;
 }
 
