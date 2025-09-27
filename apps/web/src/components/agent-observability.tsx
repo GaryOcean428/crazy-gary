@@ -21,17 +21,17 @@ import {
   Settings,
   BarChart3,
   Filter,
-  Refresh,
+  RefreshCw,
   Download,
   Search
 } from 'lucide-react'
 
 export function AgentObservability() {
-  const [metrics, setMetrics] = useState(null)
-  const [activeTraces, setActiveTraces] = useState([])
-  const [completedTraces, setCompletedTraces] = useState([])
-  const [selectedTrace, setSelectedTrace] = useState(null)
-  const [realTimeEvents, setRealTimeEvents] = useState([])
+  const [metrics, setMetrics] = useState<Record<string, unknown> | null>(null)
+  const [activeTraces, setActiveTraces] = useState<Array<Record<string, unknown>>>([])
+  const [completedTraces, setCompletedTraces] = useState<Array<Record<string, unknown>>>([])
+  const [selectedTrace, setSelectedTrace] = useState<Record<string, unknown> | null>(null)
+  const [realTimeEvents, setRealTimeEvents] = useState<Array<{ timestamp: number; [key: string]: unknown }>>([])
   const [isMonitoring, setIsMonitoring] = useState(false)
   const [filter, _setFilter] = useState({
     eventTypes: [],
@@ -39,29 +39,8 @@ export function AgentObservability() {
     taskId: ''
   })
   const { toast } = useToast()
-  const intervalRef = useRef(null)
+  const intervalRef = useRef<NodeJS.Timeout | null>(null)
   const maxEvents = 1000
-
-  useEffect(() => {
-    fetchMetrics()
-    fetchActiveTraces()
-    fetchCompletedTraces()
-    
-    // Set up polling for real-time updates
-    if (isMonitoring) {
-      intervalRef.current = setInterval(() => {
-        fetchMetrics()
-        fetchActiveTraces()
-        fetchRealTimeEvents()
-      }, 2000)
-    }
-    
-    return () => {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current)
-      }
-    }
-  }, [isMonitoring, fetchMetrics, fetchActiveTraces, fetchCompletedTraces, fetchRealTimeEvents])
 
   const fetchMetrics = useCallback(async () => {
     try {
@@ -118,12 +97,11 @@ export function AgentObservability() {
       }
       
       const response = await fetch(`/api/observability/events/stream?${params}`)
-      const data = await response.json()
-      
-      if (data.success && data.events.length > 0) {
+      const eventData = await response.json()
+      if (eventData.success && eventData.events) {
         setRealTimeEvents(prev => {
-          const newEvents = [...data.events, ...prev].slice(0, maxEvents)
-          return newEvents.sort((a, b) => b.timestamp - a.timestamp)
+          const newEvents = [...prev, ...eventData.events]
+          return newEvents.slice(-maxEvents)
         })
       }
     } catch (error) {
@@ -131,7 +109,29 @@ export function AgentObservability() {
     }
   }, [realTimeEvents, filter, maxEvents])
 
-  const fetchTraceDetails = async (traceId) => {
+  useEffect(() => {
+    fetchMetrics()
+    fetchActiveTraces()
+    fetchCompletedTraces()
+    
+    // Set up polling for real-time updates
+    if (isMonitoring) {
+      intervalRef.current = setInterval(() => {
+        fetchMetrics()
+        fetchActiveTraces()
+        fetchRealTimeEvents()
+      }, 2000)
+    }
+    
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current)
+      }
+    }
+  }, [isMonitoring, fetchMetrics, fetchActiveTraces, fetchCompletedTraces, fetchRealTimeEvents])
+
+
+  const fetchTraceDetails = async (traceId: string) => {
     try {
       const response = await fetch(`/api/observability/traces/${traceId}`)
       const data = await response.json()
@@ -163,18 +163,18 @@ export function AgentObservability() {
     }
   }
 
-  const formatTimestamp = (timestamp) => {
+  const formatTimestamp = (timestamp: number) => {
     return new Date(timestamp * 1000).toLocaleTimeString()
   }
 
-  const formatDuration = (durationMs) => {
+  const formatDuration = (durationMs: number) => {
     if (!durationMs) return 'N/A'
     if (durationMs < 1000) return `${durationMs.toFixed(0)}ms`
     if (durationMs < 60000) return `${(durationMs / 1000).toFixed(1)}s`
     return `${(durationMs / 60000).toFixed(1)}m`
   }
 
-  const getEventIcon = (eventType) => {
+  const getEventIcon = (eventType: string) => {
     const iconMap = {
       'task_start': <PlayCircle className="h-4 w-4 text-blue-500" />,
       'task_complete': <CheckCircle className="h-4 w-4 text-green-500" />,
@@ -194,7 +194,7 @@ export function AgentObservability() {
     return iconMap[eventType] || <Activity className="h-4 w-4 text-gray-400" />
   }
 
-  const getStateIcon = (state) => {
+  const getStateIcon = (state: string) => {
     const iconMap = {
       'idle': <PauseCircle className="h-4 w-4 text-gray-400" />,
       'planning': <Brain className="h-4 w-4 text-orange-500 animate-pulse" />,
