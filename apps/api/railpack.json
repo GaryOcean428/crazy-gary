@@ -7,7 +7,21 @@
     "provider": "python",
     "steps": {
       "install": {
-        "commands": ["pip install -r requirements.txt"]
+        "commands": [
+          "pip install -r requirements.txt",
+          "npm install -g npm@latest",
+          "npm install --legacy-peer-deps"
+        ]
+      },
+      "build": {
+        "commands": [
+          "echo '🎨 Building frontend...'",
+          "cd apps/web && npm run build",
+          "echo '📁 Copying frontend to static directory...'",
+          "rm -rf apps/api/src/static/*",
+          "cp -r apps/web/dist/* apps/api/src/static/",
+          "echo '✅ Frontend built and copied successfully'"
+        ]
       }
     }
   },
