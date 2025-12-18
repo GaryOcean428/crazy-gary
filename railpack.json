@@ -23,7 +23,7 @@
           "customName": "Upgrade pip"
         },
         {
-          "cmd": "cd apps/api && pip install --no-cache-dir -r requirements.txt",
+          "cmd": "cd apps/api && (uv pip install --no-cache-dir -r requirements.txt || pip install --no-cache-dir -r requirements.txt)",
           "customName": "Install Python dependencies"
         },
         {
@@ -68,8 +68,7 @@
         {
           "name": "python_app",
           "files": [
-            "apps/api",
-            "apps/web/dist"
+            "apps/api"
           ]
         }
       ]

@@ -37,7 +37,7 @@ export default defineConfig({
   // Development server configuration
   server: {
     host: '0.0.0.0',
-    port: parseInt(process.env.PORT || '5675'), // Using 5675 instead of default 5173 to avoid conflicts
+    port: parseInt(process.env.PORT || '5675'), // Using 5675 to avoid conflicts with other local Vite dev servers and Railway port assignments
     proxy: {
       '/api': {
         target: process.env.VITE_API_URL || 'http://localhost:8000',
