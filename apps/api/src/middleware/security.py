@@ -13,13 +13,32 @@ import re
 import html
 import json
 import logging
-import redis
+# Optional redis import with fallback
+try:
+    import redis
+    REDIS_AVAILABLE = True
+except ImportError:
+    redis = None
+    REDIS_AVAILABLE = False
 from functools import wraps
 from typing import Dict, Any, Optional, List, Union
 from urllib.parse import urlparse, parse_qs
-import bleach
+# Optional bleach import with fallback
+try:
+    import bleach
+    BLEACH_AVAILABLE = True
+except ImportError:
+    bleach = None
+    BLEACH_AVAILABLE = False
+    import re
 from marshmallow import Schema, fields, ValidationError
-import psutil
+# Optional psutil import with fallback
+try:
+    import psutil
+    PSUTIL_AVAILABLE = True
+except ImportError:
+    psutil = None
+    PSUTIL_AVAILABLE = False
 from datetime import datetime, timedelta
 import threading
 from collections import defaultdict
@@ -70,6 +89,12 @@ class RedisRateLimiter:
     def _initialize(self):
         """Initialize Redis connection lazily"""
         if self._initialized:
+            return
+            
+        if not REDIS_AVAILABLE or redis is None:
+            self._logger.warning("Redis library not available, using memory-based rate limiting")
+            self.redis_client = None
+            self._initialized = True
             return
             
         try:
@@ -190,7 +215,11 @@ class InputValidator:
         
         # Sanitize HTML content
         if '<' in data and '>' in data:
-            sanitized = bleach.clean(data, tags=cls.ALLOWED_TAGS, strip=True)
+            if BLEACH_AVAILABLE and bleach:
+                sanitized = bleach.clean(data, tags=cls.ALLOWED_TAGS, strip=True)
+            else:
+                # Fallback HTML sanitizer when bleach is not available
+                sanitized = cls._fallback_html_sanitizer(data)
         else:
             sanitized = data
         
@@ -200,6 +229,46 @@ class InputValidator:
             return False, None
         
         return True, sanitized
+    
+    @classmethod
+    def _fallback_html_sanitizer(cls, content: str) -> str:
+        """Fallback HTML sanitizer when bleach is not available"""
+        if not BLEACH_AVAILABLE:
+            # Log warning about missing bleach
+            if hasattr(cls, '_logger') and cls._logger:
+                cls._logger.warning(
+                    "bleach library not available, using basic HTML sanitization. "
+                    "Consider installing bleach for better security."
+                )
+        
+        # Basic HTML sanitization - remove all tags except allowed ones
+        import re
+        
+        # First, remove all script tags and their content
+        content = re.sub(r'<script[^>]*>.*?</script>', '', content, flags=re.IGNORECASE | re.DOTALL)
+        
+        # Remove dangerous tags
+        dangerous_tags = ['script', 'object', 'embed', 'link', 'style', 'iframe', 'frame', 'frameset', 
+                         'noframes', 'noscript', 'applet', 'base', 'head', 'html', 'body']
+        for tag in dangerous_tags:
+            content = re.sub(f'<{tag}[^>]*>.*?</{tag}>', '', content, flags=re.IGNORECASE | re.DOTALL)
+            content = re.sub(f'<{tag}[^>]*/?>', '', content, flags=re.IGNORECASE)
+        
+        # Remove dangerous attributes
+        # Use raw strings for regex patterns
+        content = re.sub(r'on\w+="[^"]*"', '', content, flags=re.IGNORECASE)
+        content = re.sub(r'on\w+=[^\s>]+\s', '', content, flags=re.IGNORECASE)
+        content = re.sub(r'javascript:"[^"]*"', '', content, flags=re.IGNORECASE)
+        content = re.sub(r'javascript=[^\s>]+\s', '', content, flags=re.IGNORECASE)
+        content = re.sub(r'vbscript:"[^"]*"', '', content, flags=re.IGNORECASE)
+        content = re.sub(r'vbscript=[^\s>]+\s', '', content, flags=re.IGNORECASE)
+        
+        # Only keep allowed tags - remove all others
+        allowed_tags_pattern = '|'.join([f'<{tag}[^>]*/?>' for tag in cls.ALLOWED_TAGS])
+        # Remove tags not in allowed list
+        content = re.sub(f'<(?!(?:{"|".join(cls.ALLOWED_TAGS)}))[^>]+>', '', content)
+        
+        return content.strip()
     
     @classmethod
     def _validate_key(cls, key: str) -> bool:
@@ -328,6 +397,9 @@ class PerformanceMonitor:
     
     def get_system_metrics(self) -> Dict[str, Any]:
         """Get system performance metrics"""
+        if not PSUTIL_AVAILABLE or psutil is None:
+            return {'status': 'psutil_not_available'}
+            
         try:
             return {
                 'cpu_percent': psutil.cpu_percent(interval=1),
@@ -335,8 +407,8 @@ class PerformanceMonitor:
                 'disk_usage': psutil.disk_usage('/').percent,
                 'active_connections': len(psutil.net_connections())
             }
-        except Exception:
-            return {}
+        except Exception as e:
+            return {'error': str(e)}
 
 
 class SecurityHeaders:
@@ -1013,7 +1085,7 @@ def setup_security(app):
     @app.before_request
     def handle_preflight():
         """Handle CORS preflight requests"""
-        if request.method == "OPTIONS":
+        if request.method == 'OPTIONS':
             response = make_response()
             origin = request.headers.get('Origin')
             allowed_origins = config.allowed_origins
@@ -1218,9 +1290,12 @@ def setup_security(app):
         # Test Redis connection if configured
         if config.redis_url != 'redis://localhost:6379':
             try:
-                redis_client = redis.from_url(config.redis_url)
-                redis_client.ping()
-                health['components']['redis'] = 'connected'
+                if REDIS_AVAILABLE and redis:
+                    redis_client = redis.from_url(config.redis_url)
+                    redis_client.ping()
+                    health['components']['redis'] = 'connected'
+                else:
+                    health['components']['redis'] = 'library_not_available'
             except Exception:
                 health['components']['redis'] = 'disconnected'
                 health['status'] = 'degraded'
@@ -1290,14 +1365,18 @@ def get_client_info(request) -> Dict[str, str]:
 
 
 def sanitize_html_content(content: str) -> str:
-    """Sanitize HTML content using bleach"""
-    return bleach.clean(
-        content, 
-        tags=InputValidator.ALLOWED_TAGS,
-        attributes={},
-        protocols=['http', 'https', 'mailto'],
-        strip=True
-    )
+    """Sanitize HTML content using bleach or fallback"""
+    if BLEACH_AVAILABLE and bleach:
+        return bleach.clean(
+            content, 
+            tags=InputValidator.ALLOWED_TAGS,
+            attributes={},
+            protocols=['http', 'https', 'mailto'],
+            strip=True
+        )
+    else:
+        # Use fallback sanitizer
+        return InputValidator._fallback_html_sanitizer(content)
 
 
 def generate_csrf_token() -> str:
