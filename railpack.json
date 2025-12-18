@@ -3,11 +3,13 @@
   "provider": "python",
   "metadata": {
     "name": "crazy-gary",
-    "description": "Heavy-powered autonomous agentic AI system with Flask API and React frontend"
+    "description": "Heavy-powered autonomous agentic AI system with Flask API and React frontend",
+    "version": "1.0.0"
   },
   "buildAptPackages": [
     "git",
-    "curl"
+    "curl",
+    "build-essential"
   ],
   "packages": {
     "python": "3.11",
@@ -17,15 +19,15 @@
     "install": {
       "commands": [
         {
-          "cmd": "cd apps/api && uv pip install -r requirements.txt",
+          "cmd": "python -m pip install --upgrade pip",
+          "customName": "Upgrade pip"
+        },
+        {
+          "cmd": "cd apps/api && pip install --no-cache-dir -r requirements.txt",
           "customName": "Install Python dependencies"
         },
         {
-          "cmd": "npm install -g npm@latest",
-          "customName": "Update npm"
-        },
-        {
-          "cmd": "cd apps/web && npm install --legacy-peer-deps",
+          "cmd": "cd apps/web && npm ci --legacy-peer-deps || npm install --legacy-peer-deps",
           "customName": "Install Node.js dependencies"
         }
       ]
@@ -42,24 +44,24 @@
           "customName": "Frontend build start"
         },
         {
-          "cmd": "cd apps/web && npm run build",
+          "cmd": "cd apps/web && NODE_ENV=production npm run build",
           "customName": "Build React application"
         },
         {
-          "cmd": "echo '📁 Copying frontend to static directory...'",
-          "customName": "Copy frontend files"
+          "cmd": "echo '📁 Preparing static directory...'",
+          "customName": "Prepare static directory"
         },
         {
-          "cmd": "rm -rf apps/api/src/static/*",
+          "cmd": "mkdir -p apps/api/src/static",
+          "customName": "Create static directory"
+        },
+        {
+          "cmd": "rm -rf apps/api/src/static/* || true",
           "customName": "Clear existing static files"
         },
         {
-          "cmd": "cp -r apps/web/dist/* apps/api/src/static/",
+          "cmd": "cp -r apps/web/dist/* apps/api/src/static/ && echo '✅ Frontend built and integrated successfully'",
           "customName": "Copy built frontend to Flask static"
-        },
-        {
-          "cmd": "echo '✅ Frontend built and integrated successfully'",
-          "customName": "Build completion"
         }
       ],
       "deployOutputs": [
@@ -67,19 +69,25 @@
           "name": "python_app",
           "files": [
             "apps/api",
-            "requirements.txt"
+            "apps/web/dist"
           ]
         }
       ]
     }
   },
   "deploy": {
-    "startCommand": "cd apps/api && PYTHONPATH=/workspace/crazy-gary/apps/api gunicorn --worker-class gevent -w 1 --bind 0.0.0.0:$PORT --timeout 120 --keep-alive 5 --log-level info src.main:app",
+    "startCommand": "cd apps/api && python -m gunicorn --worker-class gevent --workers 1 --bind 0.0.0.0:$PORT --timeout 120 --keep-alive 5 --max-requests 1000 --max-requests-jitter 50 --log-level info --access-logfile - --error-logfile - src.main:app",
     "healthCheckPath": "/api/health",
     "healthCheckTimeout": 300,
+    "restartPolicyType": "ON_FAILURE",
+    "restartPolicyMaxRetries": 3,
     "environmentVariables": {
       "PYTHONPATH": "/workspace/crazy-gary/apps/api",
-      "FLASK_ENV": "production"
+      "FLASK_ENV": "production",
+      "PYTHONUNBUFFERED": "1",
+      "PORT": "${PORT}",
+      "HOST": "0.0.0.0",
+      "ENVIRONMENT": "production"
     }
   }
 }
