@@ -34,8 +34,8 @@ export interface CacheOptions {
   ttl?: number;
   maxSize?: number;
   forceRefresh?: boolean;
-[];
-  priority  dependencies?: string?: 'low' | 'normal' | 'high';
+  dependencies?: string[];
+  priority?: 'low' | 'normal' | 'high';
   tags?: string[];
   callback?: (key: string, value: any) => void;
 }

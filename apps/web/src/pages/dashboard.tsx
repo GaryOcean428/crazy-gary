@@ -278,7 +278,7 @@ export function Dashboard() {
           </div>
         </div>
       </CardContent>
-    </Card>
+    </CardHover>
   )
 
   if (initialLoad) {
@@ -563,6 +563,6 @@ export function Dashboard() {
           )}
         </CardContent>
       </Card>
-    </div>
+    </PageTransition>
   )
 }

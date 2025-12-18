@@ -634,7 +634,7 @@ export class CacheWarmupService {
     ];
   }
 
-  private async getTimePatterns(): Promise<Record<string, number>>> {
+  private async getTimePatterns(): Promise<Record<string, number>> {
     // Mock time patterns
     return {
       'morning': 0.3,
