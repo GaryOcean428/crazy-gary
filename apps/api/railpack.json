@@ -12,7 +12,7 @@
     }
   },
   "deploy": {
-    "startCommand": "gunicorn --worker-class gevent -w 1 --bind 0.0.0.0:$PORT --timeout 120 --keep-alive 5 --log-level info src.main:app",
+    "startCommand": "PYTHONPATH=/workspace/crazy-gary/apps/api gunicorn --worker-class gevent -w 1 --bind 0.0.0.0:$PORT --timeout 120 --keep-alive 5 --log-level info src.main:app",
     "healthCheckPath": "/api/health",
     "healthCheckTimeout": 300
   }
