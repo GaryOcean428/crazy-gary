@@ -13,12 +13,9 @@
     "noEmit": true,
     "jsx": "react-jsx",
 
-<<<<<<< HEAD
-    /* Performance */
+    /* Performance optimizations */
     "incremental": true,
 
-=======
->>>>>>> d8a38d4aed4f9316de58ec6d6b5ae08fca56e20e
     /* Type Safety - Production Standards */
     "strict": true,
     "noImplicitAny": true,
@@ -62,7 +59,6 @@
       "@/layouts/*": ["./src/layouts/*"],
       "@/api/*": ["./src/api/*"],
       "@/config/*": ["./src/config/*"]
-<<<<<<< HEAD
     }
   },
   "include": [
@@ -78,6 +74,7 @@
     ".next",
     ".turbo",
     "coverage",
+    "storybook-static",
     "*.config.js",
     "*.config.ts",
     "jest.config.js",
@@ -88,15 +85,3 @@
     { "path": "./tsconfig.test.json" }
   ]
 }
-=======
-    },
-
-    /* Performance optimizations */
-    "incremental": true,
-    "noEmitOnError": true
-  },
-  "include": ["src"],
-  "exclude": ["node_modules", "dist", ".next", "coverage", "storybook-static"],
-  "references": [{ "path": "./tsconfig.node.json" }]
-}
->>>>>>> d8a38d4aed4f9316de58ec6d6b5ae08fca56e20e
