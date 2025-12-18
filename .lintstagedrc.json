@@ -1,4 +1,5 @@
 {
+<<<<<<< HEAD
   "*.{ts,tsx}": [
     "eslint --fix --max-warnings 0",
     "prettier --write",
@@ -24,3 +25,28 @@
     "npm test -- --run --reporter=verbose"
   ]
 }
+=======
+  "*.{js,jsx,ts,tsx}": [
+    "eslint --fix",
+    "prettier --write",
+    "git add"
+  ],
+  "*.{json,md,yml,yaml}": [
+    "prettier --write",
+    "git add"
+  ],
+  "*.{css,scss,less}": [
+    "prettier --write",
+    "git add"
+  ],
+  "package.json": [
+    "prettier --write",
+    "git add"
+  ],
+  "*.py": [
+    "black --line-length 88",
+    "flake8",
+    "git add"
+  ]
+}
+>>>>>>> d8a38d4aed4f9316de58ec6d6b5ae08fca56e20e

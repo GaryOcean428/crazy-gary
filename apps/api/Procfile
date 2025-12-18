@@ -1,1 +1,5 @@
+<<<<<<< HEAD
 web: cd apps/api && PYTHONPATH=/workspace/crazy-gary/apps/api gunicorn --worker-class gevent -w 1 --bind 0.0.0.0:$PORT --timeout 120 --keep-alive 5 --log-level info src.main:app
+=======
+web: cd apps/api && PYTHONPATH=/workspace/crazy-gary/apps/api gunicorn --worker-class gevent -w 1 --bind 0.0.0.0:$PORT --timeout 120 --keep-alive 5 --log-level info src.main:app
+>>>>>>> d8a38d4aed4f9316de58ec6d6b5ae08fca56e20e

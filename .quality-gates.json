@@ -1,4 +1,5 @@
 {
+<<<<<<< HEAD
   "version": "1.0",
   "performance": {
     "maxHookExecutionTime": 30,
@@ -173,3 +174,102 @@
     "progressBar": true
   }
 }
+=======
+  "version": "2.0.0",
+  "description": "Production Quality Gates for Crazy-Gary",
+  "thresholds": {
+    "test_coverage": {
+      "lines": 85,
+      "statements": 85,
+      "functions": 80,
+      "branches": 80,
+      "enforce": true
+    },
+    "performance": {
+      "bundle_size_mb": 0.5,
+      "load_time_ms": 3000,
+      "lighthouse_score": 90,
+      "enforce": true
+    },
+    "security": {
+      "audit_severity": "moderate",
+      "vulnerability_count": 0,
+      "enforce": true
+    },
+    "quality": {
+      "cyclomatic_complexity": 10,
+      "code_duplication": 5,
+      "technical_debt_ratio": 5,
+      "enforce": true
+    }
+  },
+  "checks": {
+    "pre_commit": {
+      "enabled": true,
+      "timeout_seconds": 30,
+      "parallel": true,
+      "checks": [
+        "typescript_compilation",
+        "eslint",
+        "prettier_format",
+        "security_scan",
+        "dependency_audit"
+      ]
+    },
+    "pre_push": {
+      "enabled": true,
+      "timeout_seconds": 300,
+      "checks": [
+        "full_test_suite",
+        "test_coverage_validation",
+        "build_validation",
+        "security_scan",
+        "performance_test"
+      ]
+    },
+    "pre_merge": {
+      "enabled": true,
+      "required_approvals": 2,
+      "checks": [
+        "all_quality_gates",
+        "security_review",
+        "accessibility_review",
+        "documentation_review"
+      ]
+    }
+  },
+  "notifications": {
+    "slack": {
+      "enabled": false,
+      "webhook_url": "${SLACK_WEBHOOK_URL}",
+      "channels": {
+        "quality_failures": "#dev-quality",
+        "security_alerts": "#security",
+        "deployments": "#deployments"
+      }
+    },
+    "email": {
+      "enabled": true,
+      "recipients": [
+        "devops@company.com",
+        "security@company.com"
+      ]
+    }
+  },
+  "integration": {
+    "github": {
+      "enabled": true,
+      "require_status_checks": true,
+      "enforce_admins": false
+    },
+    "codecov": {
+      "enabled": true,
+      "threshold": 85
+    },
+    "snyk": {
+      "enabled": true,
+      "severity_threshold": "moderate"
+    }
+  }
+}
+>>>>>>> d8a38d4aed4f9316de58ec6d6b5ae08fca56e20e
