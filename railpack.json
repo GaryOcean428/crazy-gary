@@ -17,7 +17,7 @@
     "install": {
       "commands": [
         {
-          "cmd": "pip install -r apps/api/requirements.txt",
+          "cmd": "cd apps/api && uv pip install -r requirements.txt",
           "customName": "Install Python dependencies"
         },
         {
