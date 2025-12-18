@@ -37,7 +37,7 @@ export default defineConfig({
   // Development server configuration
   server: {
     host: '0.0.0.0',
-    port: parseInt(process.env.PORT || '5675'),
+    port: parseInt(process.env.PORT || '5675'), // Using 5675 instead of default 5173 to avoid conflicts
     proxy: {
       '/api': {
         target: process.env.VITE_API_URL || 'http://localhost:8000',
@@ -63,8 +63,8 @@ export default defineConfig({
     // Minification with terser for better compression
     minify: 'terser',
     
-    // CSS code splitting disabled for better caching
-    cssCodeSplit: false,
+    // CSS code splitting for granular caching and parallel loading
+    cssCodeSplit: true,
     
     // Terser options for production
     terserOptions: {

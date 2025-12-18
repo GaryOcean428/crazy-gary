@@ -26,10 +26,10 @@ marshmallow==3.23.0
 validators==0.34.0
 email-validator==2.2.0
 
-# HTTP and API
+# HTTP and API - pinned for security
 requests==2.32.4
-urllib3>=2.0.0
-certifi>=2024.0.0
+urllib3==2.2.3
+certifi==2024.12.14
 
 # Monitoring
 psutil==7.0.0
