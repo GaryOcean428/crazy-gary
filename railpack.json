@@ -15,7 +15,6 @@
   },
   "steps": {
     "install": {
-      "inputs": [],
       "commands": [
         {
           "cmd": "pip install -r apps/api/requirements.txt",
