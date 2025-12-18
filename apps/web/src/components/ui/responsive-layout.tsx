@@ -196,8 +196,8 @@ const ResponsiveCardGrid = React.forwardRef<
   const isMobile = useIsMobile()
   
   const getColumns = () => {
-    if (') {
-      returncolumns === 'auto isMobile ? 'grid-cols-1' : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3'
+    if (columns === 'auto') {
+      return isMobile ? 'grid-cols-1' : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3'
     }
     return `grid-cols-${columns}`
   }
@@ -282,8 +282,8 @@ const ResponsiveStack = React.forwardRef<
   
   const justifyClasses = {
     start: 'justify-start',
-    center: ' end: 'justifyjustify-center',
-   -end',
+    center: 'justify-center',
+    end: 'justify-end',
     between: 'justify-between',
     around: 'justify-around',
     evenly: 'justify-evenly'
@@ -342,8 +342,8 @@ const ResponsiveSection = React.forwardRef<
         "w-full",
         paddingClasses[padding],
         backgroundClasses[background],
-        border && "border-t rounded && "r border-border",
-       ounded-lg sm:rounded-xl",
+        border && "border-t border-border",
+        rounded && "rounded-lg sm:rounded-xl",
         className
       )}
       {...props}

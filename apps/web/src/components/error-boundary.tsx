@@ -1,6 +1,5 @@
 import React, { Component, ErrorInfo, ReactNode, ComponentType } from 'react'
 import { Button } from '@/components/ui/button'
-<<<<<<< HEAD
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
@@ -95,62 +94,12 @@ class ErrorReportingService {
   private static instance: ErrorReportingService
   private reports: ErrorReport[] = []
   private maxReports = 100
-=======
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { AlertTriangle, RefreshCw, Home, Bug, Shield, Zap } from 'lucide-react'
-
-// Error context and types
-interface ErrorInfo {
-  componentStack: string
-}
-
-interface ErrorBoundaryState {
-  hasError: boolean
-  error?: Error
-  errorInfo?: ErrorInfo
-  errorId: string
-  retryCount: number
-}
-
-interface ErrorBoundaryProps {
-  children: ReactNode
-  fallback?: ComponentType<ErrorFallbackProps>
-  onError?: (error: Error, errorInfo: ErrorInfo) => void
-  showDetails?: boolean
-  maxRetries?: number
-  retryDelay?: number
-}
-
-interface ErrorFallbackProps {
-  error: Error
-  errorInfo: ErrorInfo
-  errorId: string
-  retryCount: number
-  onRetry: () => void
-  onGoHome: () => void
-  onReportIssue: () => void
-}
-
-// Enhanced error reporting service
-class ErrorReportingService {
-  private static instance: ErrorReportingService
-  private events: Array<{
-    id: string
-    timestamp: Date
-    error: Error
-    errorInfo: ErrorInfo
-    severity: 'critical' | 'high' | 'medium' | 'low'
-    userAgent: string
-    url: string
-  }> = []
->>>>>>> d8a38d4aed4f9316de58ec6d6b5ae08fca56e20e
 
   static getInstance(): ErrorReportingService {
     if (!ErrorReportingService.instance) {
       ErrorReportingService.instance = new ErrorReportingService()
     }
     return ErrorReportingService.instance
-<<<<<<< HEAD
   }
 
   generateErrorId(): string {
@@ -450,66 +399,6 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
 
   handleReload = () => {
     window.location.reload()
-=======
-  }
-
-  reportError(error: Error, errorInfo: ErrorInfo, severity: 'critical' | 'high' | 'medium' | 'low' = 'medium'): string {
-    const errorId = `error_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-    
-    const event = {
-      id: errorId,
-      timestamp: new Date(),
-      error,
-      errorInfo,
-      severity,
-      userAgent: navigator.userAgent,
-      url: window.location.href
-    }
-
-    this.events.push(event)
-    
-    // Keep only last 100 events
-    if (this.events.length > 100) {
-      this.events = this.events.slice(-100)
-    }
-
-    // In production, this would send to external service like Sentry
-    if (process.env.NODE_ENV === 'production') {
-      this.sendToExternalService(event)
-    } else {
-      console.error(`[ErrorBoundary] Error ${errorId}:`, error, errorInfo)
-    }
-
-    return errorId
-  }
-
-  private async sendToExternalService(event: any) {
-    try {
-      // Integration with external error tracking service
-      await fetch('/api/errors/report', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          errorId: event.id,
-          message: event.error.message,
-          stack: event.error.stack,
-          componentStack: event.errorInfo.componentStack,
-          severity: event.severity,
-          userAgent: event.userAgent,
-          url: event.url,
-          timestamp: event.timestamp.toISOString()
-        })
-      })
-    } catch (e) {
-      console.error('Failed to send error to external service:', e)
-    }
-  }
-
-  getRecentErrors() {
-    return this.events.slice(-10)
->>>>>>> d8a38d4aed4f9316de58ec6d6b5ae08fca56e20e
   }
 
   getErrorById(id: string) {
@@ -721,7 +610,6 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
     window.location.href = '/'
   }
 
-<<<<<<< HEAD
   handleReportError = () => {
     if (this.state.error && this.state.errorInfo) {
       const report = this.errorReportingService.reportError(
@@ -746,25 +634,6 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
       isRetrying: false,
       lastRetryAt: null
     })
-=======
-  private handleReportIssue = () => {
-    const errorDetails = {
-      errorId: this.state.errorId,
-      error: this.state.error?.message,
-      stack: this.state.error?.stack,
-      componentStack: this.state.errorInfo?.componentStack,
-      url: window.location.href,
-      userAgent: navigator.userAgent,
-      timestamp: new Date().toISOString()
-    }
-    
-    // In a real app, this would open a support form or email client
-    const mailtoLink = `mailto:support@example.com?subject=Error Report - ${this.state.errorId}&body=${encodeURIComponent(
-      JSON.stringify(errorDetails, null, 2)
-    )}`
-    
-    window.open(mailtoLink)
->>>>>>> d8a38d4aed4f9316de58ec6d6b5ae08fca56e20e
   }
 
   render() {
@@ -774,7 +643,6 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
       return (
         <FallbackComponent
           error={this.state.error!}
-<<<<<<< HEAD
           errorInfo={this.state.errorInfo}
           errorId={this.state.errorId}
           retryCount={this.state.retryCount}
@@ -787,14 +655,6 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
           maxRetries={this.props.maxRetries || 3}
           enableRetry={this.props.enableRetry !== false}
           enableErrorReporting={this.props.enableErrorReporting !== false}
-=======
-          errorInfo={this.state.errorInfo!}
-          errorId={this.state.errorId}
-          retryCount={this.state.retryCount}
-          onRetry={this.handleRetry}
-          onGoHome={this.handleGoHome}
-          onReportIssue={this.handleReportIssue}
->>>>>>> d8a38d4aed4f9316de58ec6d6b5ae08fca56e20e
         />
       )
     }
@@ -803,7 +663,6 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
   }
 }
 
-<<<<<<< HEAD
 // Default Error Fallback Component
 function DefaultErrorFallback(props: ErrorBoundaryFallbackProps) {
   const maxRetries = props.maxRetries
@@ -1101,7 +960,7 @@ export const useErrorHandler = () => {
     }
   }, [toast])
 
-  const handleAsyncError = React.useCallback(async <T>(
+  const handleAsyncError = React.useCallback(async <T extends unknown>(
     operation: () => Promise<T>,
     fallback?: T,
     context: Record<string, unknown> = {}
@@ -1140,36 +999,6 @@ export const errorRecovery = {
   withRetry: ErrorRecoveryService.retryWithBackoff,
   safeAsync: ErrorRecoveryService.safeAsyncOperation,
   createSafeComponent: ErrorRecoveryService.createSafeComponent
-=======
-// Higher-order component for easier usage
-export function withErrorBoundary<P extends object>(
-  Component: ComponentType<P>,
-  errorBoundaryProps?: Omit<ErrorBoundaryProps, 'children'>
-) {
-  const WrappedComponent = (props: P) => (
-    <ErrorBoundary {...errorBoundaryProps}>
-      <Component {...props} />
-    </ErrorBoundary>
-  )
-  
-  WrappedComponent.displayName = `withErrorBoundary(${Component.displayName || Component.name})`
-  
-  return WrappedComponent
-}
-
-// Hook for error handling
-export function useErrorHandler() {
-  const errorReportingService = ErrorReportingService.getInstance()
-  
-  const handleError = React.useCallback(
-    (error: Error, errorInfo?: ErrorInfo, severity: 'critical' | 'high' | 'medium' | 'low' = 'medium') => {
-      return errorReportingService.reportError(error, errorInfo || { componentStack: '' }, severity)
-    },
-    [errorReportingService]
-  )
-  
-  return { handleError }
->>>>>>> d8a38d4aed4f9316de58ec6d6b5ae08fca56e20e
 }
 
 // Specialized error boundary components
