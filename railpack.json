@@ -1,0 +1,86 @@
+{
+  "$schema": "https://schema.railpack.com",
+  "provider": "python",
+  "metadata": {
+    "name": "crazy-gary",
+    "description": "Heavy-powered autonomous agentic AI system with Flask API and React frontend"
+  },
+  "buildAptPackages": [
+    "git",
+    "curl"
+  ],
+  "packages": {
+    "python": "3.11",
+    "node": "18"
+  },
+  "steps": {
+    "install": {
+      "inputs": [],
+      "commands": [
+        {
+          "cmd": "pip install -r apps/api/requirements.txt",
+          "customName": "Install Python dependencies"
+        },
+        {
+          "cmd": "npm install -g npm@latest",
+          "customName": "Update npm"
+        },
+        {
+          "cmd": "cd apps/web && npm install --legacy-peer-deps",
+          "customName": "Install Node.js dependencies"
+        }
+      ]
+    },
+    "build": {
+      "inputs": [
+        {
+          "step": "install"
+        }
+      ],
+      "commands": [
+        {
+          "cmd": "echo '🎨 Building React frontend...'",
+          "customName": "Frontend build start"
+        },
+        {
+          "cmd": "cd apps/web && npm run build",
+          "customName": "Build React application"
+        },
+        {
+          "cmd": "echo '📁 Copying frontend to static directory...'",
+          "customName": "Copy frontend files"
+        },
+        {
+          "cmd": "rm -rf apps/api/src/static/*",
+          "customName": "Clear existing static files"
+        },
+        {
+          "cmd": "cp -r apps/web/dist/* apps/api/src/static/",
+          "customName": "Copy built frontend to Flask static"
+        },
+        {
+          "cmd": "echo '✅ Frontend built and integrated successfully'",
+          "customName": "Build completion"
+        }
+      ],
+      "deployOutputs": [
+        {
+          "name": "python_app",
+          "files": [
+            "apps/api",
+            "requirements.txt"
+          ]
+        }
+      ]
+    }
+  },
+  "deploy": {
+    "startCommand": "cd apps/api && PYTHONPATH=/workspace/crazy-gary/apps/api gunicorn --worker-class gevent -w 1 --bind 0.0.0.0:$PORT --timeout 120 --keep-alive 5 --log-level info src.main:app",
+    "healthCheckPath": "/api/health",
+    "healthCheckTimeout": 300,
+    "environmentVariables": {
+      "PYTHONPATH": "/workspace/crazy-gary/apps/api",
+      "FLASK_ENV": "production"
+    }
+  }
+}
