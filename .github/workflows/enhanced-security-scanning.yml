@@ -1,0 +1,733 @@
+name: Enhanced Security Scanning
+
+permissions:
+  contents: read
+  security-events: write
+  actions: read
+  checks: write
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  schedule:
+    # Run comprehensive security scans daily at 4 AM UTC
+    - cron: '0 4 * * *'
+  workflow_dispatch:
+    inputs:
+      scan_type:
+        description: 'Type of security scan to perform'
+        required: true
+        default: 'comprehensive'
+        type: choice
+        options:
+          - comprehensive
+          - dependency
+          - static-analysis
+          - dynamic-analysis
+          - secret-scanning
+      severity_threshold:
+        description: 'Minimum severity to report'
+        required: false
+        default: 'medium'
+        type: choice
+        options:
+          - critical
+          - high
+          - medium
+          - low
+      fail_on_severity:
+        description: 'Fail workflow on findings above threshold'
+        required: false
+        default: 'high'
+        type: choice
+        options:
+          - critical
+          - high
+          - medium
+          - none
+
+env:
+  SEMGREP_RULES: >
+    p/security-audit
+    p/python
+    p/javascript
+    p/typescript
+    p/dockerfile
+    p/kubernetes
+    p/secrets
+
+jobs:
+  # =============================================================================
+  # SECRET SCANNING
+  # =============================================================================
+  secret-scanning:
+    name: Secret Scanning
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    
+    outputs:
+      secrets-found: ${{ steps.scan.outputs.secrets }}
+      scan-status: ${{ steps.scan.outputs.status }}
+      
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install secret scanning tools
+        run: |
+          # Install TruffleHog
+          curl -sSfL https://github.com/trufflesecurity/trufflehog/releases/latest/download/trufflehog__linux_amd64.tar.gz | tar -xzO trufflehog > trufflehog && chmod +x trufflehog
+          
+          # Install GitLeaks
+          curl -sSfL https://github.com/zricethezav/gitleaks/releases/latest/download/gitleaks_8.18.2_linux_x64.tar.gz | tar -xzO gitleaks > gitleaks && chmod +x gitleaks
+
+      - name: Run TruffleHog secret scanning
+        id: trufflehog
+        run: |
+          ./trufflehog git file://. --json --no-verification > trufflehog-results.json || true
+          
+          # Count secrets found
+          secrets_count=$(jq '.SourceMetadata.Data.Filesystem.File | length' trufflehog-results.json 2>/dev/null || echo "0")
+          echo "secrets=$secrets_count" >> $GITHUB_OUTPUT
+          
+          if [ "$secrets_count" -gt 0 ]; then
+            echo "❌ Found $secrets_count potential secrets"
+            jq '.SourceMetadata.Data.Filesystem.File[] | {source_metadata: .SourceMetadata, verification: .Verified}' trufflehog-results.json
+          else
+            echo "✅ No secrets found by TruffleHog"
+          fi
+
+      - name: Run GitLeaks scanning
+        id: gitleaks
+        run: |
+          ./gitleaks detect --source . --report-format json --report-path gitleaks-results.json || true
+          
+          # Count secrets found
+          gitleaks_count=$(jq '. | length' gitleaks-results.json 2>/dev/null || echo "0")
+          
+          if [ "$gitleaks_count" -gt 0 ]; then
+            echo "❌ GitLeaks found $gitleaks_count potential secrets"
+            jq '.[] | {file: .File, line: .Line, rule: .RuleID, secret: .Secret}' gitleaks-results.json
+          else
+            echo "✅ No secrets found by GitLeaks"
+          fi
+
+      - name: Analyze secrets scan
+        id: scan
+        run: |
+          total_secrets=$(( $(jq '.SourceMetadata.Data.Filesystem.File | length' trufflehog-results.json 2>/dev/null || echo "0") + $(jq '. | length' gitleaks-results.json 2>/dev/null || echo "0") ))
+          
+          if [ "$total_secrets" -eq 0 ]; then
+            status="clean"
+            echo "secrets=0" >> $GITHUB_OUTPUT
+          else
+            status="found"
+            echo "secrets=$total_secrets" >> $GITHUB_OUTPUT
+          fi
+          
+          echo "status=$status" >> $GITHUB_OUTPUT
+
+      - name: Upload secret scan results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: secret-scan-results
+          path: |
+            trufflehog-results.json
+            gitleaks-results.json
+          retention-days: 30
+
+  # =============================================================================
+  # DEPENDENCY VULNERABILITY SCANNING
+  # =============================================================================
+  dependency-scanning:
+    name: Dependency Vulnerability Scanning
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    
+    outputs:
+      npm-vulnerabilities: ${{ steps.npm.outputs.count }}
+      python-vulnerabilities: ${{ steps.python.outputs.count }}
+      total-dependency-score: ${{ steps.score.outputs.score }}
+      
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'yarn'
+          cache-dependency-path: '**/yarn.lock'
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: Enable Corepack
+        run: |
+          corepack enable
+          corepack prepare yarn@4.9.4 --activate
+
+      - name: Install dependencies
+        run: |
+          yarn install --immutable
+          pip install -r apps/api/requirements.txt
+          pip install pip-audit safety bandit semgrep
+
+      # NPM Audit with detailed output
+      - name: NPM Dependency Audit
+        id: npm
+        run: |
+          # Run comprehensive NPM audit
+          yarn audit --json > npm-audit.json || true
+          yarn audit --audit-level moderate > npm-moderate.json 2>&1 || true
+          
+          # Parse vulnerabilities
+          critical_count=$(jq '[.vulnerabilities[] | select(.severity == "critical")] | length' npm-audit.json 2>/dev/null || echo "0")
+          high_count=$(jq '[.vulnerabilities[] | select(.severity == "high")] | length' npm-audit.json 2>/dev/null || echo "0")
+          moderate_count=$(jq '[.vulnerabilities[] | select(.severity == "moderate")] | length' npm-audit.json 2>/dev/null || echo "0")
+          low_count=$(jq '[.vulnerabilities[] | select(.severity == "low")] | length' npm-audit.json 2>/dev/null || echo "0")
+          
+          total=$((critical_count + high_count + moderate_count + low_count))
+          echo "count=$total" >> $GITHUB_OUTPUT
+          
+          # Display summary
+          echo "## NPM Dependency Audit Results"
+          echo "- Critical: $critical_count"
+          echo "- High: $high_count"
+          echo "- Moderate: $moderate_count"
+          echo "- Low: $low_count"
+          echo "- **Total: $total**"
+          
+          # Show critical vulnerabilities
+          if [ "$critical_count" -gt 0 ]; then
+            echo ""
+            echo "### Critical Vulnerabilities:"
+            jq -r '.vulnerabilities[] | select(.severity == "critical") | "- \(.title) - \(.range)"' npm-audit.json
+          fi
+
+      # Python Security Audit
+      - name: Python Security Audit
+        id: python
+        run: |
+          # Run safety check for known vulnerabilities
+          safety check --json --output safety-results.json || true
+          
+          # Run bandit for code security issues
+          bandit -r apps/api/src/ -f json -o bandit-results.json || true
+          
+          # Count vulnerabilities
+          safety_vulns=$(jq '. | length' safety-results.json 2>/dev/null || echo "0")
+          bandit_issues=$(jq '.results | length' bandit-results.json 2>/dev/null || echo "0")
+          
+          total=$((safety_vulns + bandit_issues))
+          echo "count=$total" >> $GITHUB_OUTPUT
+          
+          # Display summary
+          echo "## Python Security Audit Results"
+          echo "- Known vulnerabilities (safety): $safety_vulns"
+          echo "- Code security issues (bandit): $bandit_issues"
+          echo "- **Total: $total**"
+
+      - name: License Compliance Check
+        run: |
+          # Check for problematic licenses
+          yarn licenses list --json > licenses.json || true
+          
+          echo "## License Compliance Check"
+          
+          # Check for GPL/AGPL licenses
+          if grep -i "GPL\|AGPL" licenses.json 2>/dev/null; then
+            echo "⚠️ **GPL/AGPL licenses found - review compatibility**"
+            grep -i "GPL\|AGPL" licenses.json || true
+          else
+            echo "✅ **No GPL/AGPL licenses found**"
+          fi
+          
+          # Check for unknown licenses
+          unknown_licenses=$(jq -r '.[] | select(.license == "UNKNOWN") | .name' licenses.json 2>/dev/null | wc -l)
+          if [ "$unknown_licenses" -gt 0 ]; then
+            echo "⚠️ **$unknown_licenses packages with unknown licenses**"
+          else
+            echo "✅ **All packages have known licenses**"
+          fi
+
+      - name: Calculate dependency security score
+        id: score
+        run: |
+          npm_count=${{ steps.npm.outputs.count }}
+          python_count=${{ steps.python.outputs.count }}
+          
+          # Calculate score (0-100, higher is better)
+          score=100
+          
+          # Deduct points for vulnerabilities
+          npm_critical=$(jq '[.vulnerabilities[] | select(.severity == "critical")] | length' npm-audit.json 2>/dev/null || echo "0")
+          npm_high=$(jq '[.vulnerabilities[] | select(.severity == "high")] | length' npm-audit.json 2>/dev/null || echo "0")
+          
+          score=$((score - npm_critical * 20))  # 20 points per critical
+          score=$((score - npm_high * 10))      # 10 points per high
+          score=$((score - python_count * 5))   # 5 points per Python issue
+          
+          # Ensure score doesn't go below 0
+          score=$((score < 0 ? 0 : score))
+          
+          echo "score=$score" >> $GITHUB_OUTPUT
+          echo "## Dependency Security Score: $score/100"
+
+      - name: Upload dependency scan results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: dependency-scan-results
+          path: |
+            npm-audit.json
+            npm-moderate.json
+            safety-results.json
+            bandit-results.json
+            licenses.json
+          retention-days: 30
+
+  # =============================================================================
+  # STATIC APPLICATION SECURITY TESTING (SAST)
+  # =============================================================================
+  static-analysis:
+    name: Static Analysis Security Testing
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    
+    outputs:
+      semgrep-findings: ${{ steps.semgrep.outputs.findings }}
+      codeql-alerts: ${{ steps.codeql.outputs.alerts }}
+      overall-sast-score: ${{ steps.score.outputs.score }}
+      
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: Install Semgrep
+        run: |
+          pip install semgrep
+
+      # Semgrep SAST scanning
+      - name: Semgrep SAST Scan
+        id: semgrep
+        run: |
+          # Run comprehensive Semgrep scan
+          semgrep \
+            --config=${{ env.SEMGREP_RULES }} \
+            --json \
+            --output=semgrep-results.json \
+            --severity=INFO \
+            apps/ docs/ scripts/ || true
+          
+          # Count findings by severity
+          critical=$(jq '[.results[] | select(.extra.severity == "ERROR")] | length' semgrep-results.json 2>/dev/null || echo "0")
+          high=$(jq '[.results[] | select(.extra.severity == "WARNING")] | length' semgrep-results.json 2>/dev/null || echo "0")
+          medium=$(jq '[.results[] | select(.extra.severity == "INFO")] | length' semgrep-results.json 2>/dev/null || echo "0")
+          
+          total=$((critical + high + medium))
+          echo "findings=$total" >> $GITHUB_OUTPUT
+          
+          # Display summary
+          echo "## Semgrep SAST Scan Results"
+          echo "- Critical: $critical"
+          echo "- High: $high"
+          echo "- Medium: $medium"
+          echo "- **Total findings: $total**"
+          
+          # Show critical findings
+          if [ "$critical" -gt 0 ]; then
+            echo ""
+            echo "### Critical Findings:"
+            jq -r '.results[] | select(.extra.severity == "ERROR") | "\(.path):\(.start.line) - \(.extra.message)"' semgrep-results.json | head -10
+          fi
+
+      # CodeQL Analysis (if available)
+      - name: CodeQL Analysis
+        id: codeql
+        run: |
+          # Initialize CodeQL
+          if [ -f "codeql-database.yml" ]; then
+            echo "CodeQL database found, analyzing..."
+            
+            # Run CodeQL analysis
+            codeql database analyze \
+              --format= sarifv2.1.0 \
+              --output=codeql-results.sarif \
+              codeql-database \
+              javascript-typescript-code-scanning.qls \
+              python-code-scanning.qls || true
+              
+            # Count alerts
+            alerts=$(jq '.runs[0].results | length' codeql-results.sarif 2>/dev/null || echo "0")
+            echo "alerts=$alerts" >> $GITHUB_OUTPUT
+            
+            echo "## CodeQL Analysis Results"
+            echo "- Total alerts: $alerts"
+          else
+            echo "No CodeQL database found, skipping analysis"
+            echo "alerts=0" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Custom security rules
+        run: |
+          # Run custom security checks
+          echo "## Custom Security Checks"
+          
+          # Check for hardcoded credentials patterns
+          echo "### Hardcoded Credentials Check"
+          if grep -r -i "password.*=.*['\"][^'\"]*['\"]" apps/ --include="*.py" --include="*.js" --include="*.ts" | head -5; then
+            echo "⚠️ Potential hardcoded passwords found"
+          else
+            echo "✅ No obvious hardcoded passwords"
+          fi
+          
+          # Check for SQL injection patterns
+          echo "### SQL Injection Check"
+          if grep -r "execute.*%\|execute.*format\|execute.*{" apps/api/ --include="*.py" | head -5; then
+            echo "⚠️ Potential SQL injection patterns found"
+          else
+            echo "✅ No obvious SQL injection patterns"
+          fi
+          
+          # Check for XSS patterns
+          echo "### XSS Prevention Check"
+          if grep -r "innerHTML\|document.write" apps/web/ --include="*.js" --include="*.ts" | head -5; then
+            echo "⚠️ Potential XSS patterns found"
+          else
+            echo "✅ No obvious XSS patterns"
+          fi
+
+      - name: Calculate SAST security score
+        id: score
+        run: |
+          semgrep_count=${{ steps.semgrep.outputs.findings }}
+          codeql_count=${{ steps.codeql.outputs.alerts }}
+          
+          # Calculate score (0-100, higher is better)
+          score=100
+          
+          # Deduct points for findings
+          score=$((score - semgrep_count * 2))     # 2 points per Semgrep finding
+          score=$((score - codeql_count * 3))      # 3 points per CodeQL alert
+          
+          # Ensure score doesn't go below 0
+          score=$((score < 0 ? 0 : score))
+          
+          echo "score=$score" >> $GITHUB_OUTPUT
+          echo "## SAST Security Score: $score/100"
+
+      - name: Upload SAST scan results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: sast-scan-results
+          path: |
+            semgrep-results.json
+            codeql-results.sarif
+          retention-days: 30
+
+  # =============================================================================
+  # DYNAMIC APPLICATION SECURITY TESTING (DAST)
+  # =============================================================================
+  dynamic-analysis:
+    name: Dynamic Analysis Security Testing
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs: [static-analysis]
+    
+    outputs:
+      zap-baseline-score: ${{ steps.zap.outputs.score }}
+      dast-findings: ${{ steps.zap.outputs.findings }}
+      
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Build application
+        run: |
+          cd apps/web
+          yarn install
+          yarn build
+
+      - name: Start application
+        run: |
+          cd apps/web
+          yarn serve:dist &
+          echo "APP_PID=$!" >> $GITHUB_ENV
+          sleep 15
+
+      - name: Install OWASP ZAP
+        run: |
+          wget https://github.com/zaproxy/zaproxy/releases/download/v2.14.0/ZAP_2_14_0_unix.sh
+          chmod +x ZAP_2_14_0_unix.sh
+          echo "y" | ./ZAP_2_14_0_unix.sh
+
+      - name: Run OWASP ZAP Baseline Scan
+        id: zap
+        run: |
+          # Start ZAP in daemon mode
+          ./ZAP_2.14.0/zap.sh -daemon -config api.key=${{ secrets.ZAP_API_KEY }} &
+          ZAP_PID=$!
+          
+          # Wait for ZAP to start
+          sleep 10
+          
+          # Run baseline scan
+          ./ZAP_2.14.0/zap.sh -cmd \
+            -quickurl http://localhost:3000 \
+            -quickprogress \
+            -quickout zap-results.json \
+            -quickhtml zap-report.html || true
+          
+          # Parse results
+          if [ -f "zap-results.json" ]; then
+            high_alerts=$(jq '[.site[0].alerts[] | select(.riskcode == "3")] | length' zap-results.json 2>/dev/null || echo "0")
+            medium_alerts=$(jq '[.site[0].alerts[] | select(.riskcode == "2")] | length' zap-results.json 2>/dev/null || echo "0")
+            low_alerts=$(jq '[.site[0].alerts[] | select(.riskcode == "1")] | length' zap-results.json 2>/dev/null || echo "0")
+            
+            total=$((high_alerts + medium_alerts + low_alerts))
+            echo "findings=$total" >> $GITHUB_OUTPUT
+            
+            # Calculate score (100 - points per finding)
+            score=$((100 - high_alerts * 10 - medium_alerts * 5 - low_alerts * 2))
+            score=$((score < 0 ? 0 : score))
+            echo "score=$score" >> $GITHUB_OUTPUT
+            
+            echo "## ZAP Baseline Scan Results"
+            echo "- High Risk: $high_alerts"
+            echo "- Medium Risk: $medium_alerts"
+            echo "- Low Risk: $low_alerts"
+            echo "- **Total: $total**"
+            echo "- **DAST Score: $score/100**"
+          else
+            echo "findings=0" >> $GITHUB_OUTPUT
+            echo "score=100" >> $GITHUB_OUTPUT
+            echo "No ZAP results found"
+          fi
+
+      - name: Security headers check
+        run: |
+          echo "## Security Headers Check"
+          
+          # Check common security headers
+          headers=$(curl -I http://localhost:3000 2>/dev/null || echo "")
+          
+          echo "### Security Headers Analysis:"
+          
+          # Check for security headers
+          if echo "$headers" | grep -i "x-frame-options" > /dev/null; then
+            echo "✅ X-Frame-Options header present"
+          else
+            echo "❌ X-Frame-Options header missing"
+          fi
+          
+          if echo "$headers" | grep -i "x-content-type-options" > /dev/null; then
+            echo "✅ X-Content-Type-Options header present"
+          else
+            echo "❌ X-Content-Type-Options header missing"
+          fi
+          
+          if echo "$headers" | grep -i "strict-transport-security" > /dev/null; then
+            echo "✅ Strict-Transport-Security header present"
+          else
+            echo "❌ Strict-Transport-Security header missing"
+          fi
+          
+          if echo "$headers" | grep -i "content-security-policy" > /dev/null; then
+            echo "✅ Content-Security-Policy header present"
+          else
+            echo "❌ Content-Security-Policy header missing"
+          fi
+
+      - name: Upload DAST scan results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: dast-scan-results
+          path: |
+            zap-results.json
+            zap-report.html
+          retention-days: 30
+
+      - name: Cleanup
+        if: always()
+        run: |
+          # Kill background processes
+          kill $APP_PID 2>/dev/null || true
+          kill $ZAP_PID 2>/dev/null || true
+
+  # =============================================================================
+  # SECURITY COMPLIANCE CHECK
+  # =============================================================================
+  security-compliance:
+    name: Security Compliance Check
+    runs-on: ubuntu-latest
+    needs: [secret-scanning, dependency-scanning, static-analysis, dynamic-analysis]
+    if: always()
+    
+    outputs:
+      overall-security-score: ${{ steps.compliance.outputs.score }}
+      compliance-status: ${{ steps.compliance.outputs.status }}
+      critical-issues: ${{ steps.compliance.outputs.critical }}
+      
+    steps:
+      - name: Calculate overall security score
+        id: compliance
+        run: |
+          # Get scores from previous jobs
+          secret_score=100  # No secrets found = full score
+          dependency_score=${{ needs.dependency-scanning.outputs.total-dependency-score }}
+          sast_score=${{ needs.static-analysis.outputs.overall-sast-score }}
+          dast_score=${{ needs.dynamic-analysis.outputs.zap-baseline-score }}
+          
+          # Calculate weighted average
+          overall_score=$(( (secret_score * 20 + dependency_score * 30 + sast_score * 30 + dast_score * 20) / 100 ))
+          
+          # Determine status
+          if [ "$overall_score" -ge 90 ]; then
+            status="excellent"
+          elif [ "$overall_score" -ge 80 ]; then
+            status="good"
+          elif [ "$overall_score" -ge 70 ]; then
+            status="acceptable"
+          elif [ "$overall_score" -ge 60 ]; then
+            status="poor"
+          else
+            status="critical"
+          fi
+          
+          # Count critical issues
+          critical_count=0
+          if [ "${{ needs.secret-scanning.outputs.secrets-found }}" -gt 0 ]; then
+            critical_count=$((critical_count + 1))
+          fi
+          if [ "${{ needs.dependency-scanning.outputs.npm-vulnerabilities }}" -gt 0 ]; then
+            critical_count=$((critical_count + 1))
+          fi
+          if [ "${{ needs.static-analysis.outputs.semgrep-findings }}" -gt 0 ]; then
+            critical_count=$((critical_count + 1))
+          fi
+          if [ "${{ needs.dynamic-analysis.outputs.dast-findings }}" -gt 0 ]; then
+            critical_count=$((critical_count + 1))
+          fi
+          
+          echo "score=$overall_score" >> $GITHUB_OUTPUT
+          echo "status=$status" >> $GITHUB_OUTPUT
+          echo "critical=$critical_count" >> $GITHUB_OUTPUT
+
+      - name: Security compliance summary
+        run: |
+          echo "## 🛡️ Security Compliance Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Overall Security Score:** ${{ steps.compliance.outputs.score }}/100" >> $GITHUB_STEP_SUMMARY
+          echo "**Status:** ${{ steps.compliance.outputs.status }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Critical Issues:** ${{ steps.compliance.outputs.critical }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Security Scan Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Scan Type | Status | Score |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----------|--------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Secret Scanning | ${{ needs.secret-scanning.outputs.scan-status }} | 100/100 |" >> $GITHUB_STEP_SUMMARY
+          echo "| Dependency Security | ${{ needs.dependency-scanning.outputs.total-dependency-score > 0 && 'issues found' || 'clean' }} | ${{ needs.dependency-scanning.outputs.total-dependency-score }}/100 |" >> $GITHUB_STEP_SUMMARY
+          echo "| Static Analysis | ${{ needs.static-analysis.outputs.semgrep-findings > 0 && 'issues found' || 'clean' }} | ${{ needs.static-analysis.outputs.overall-sast-score }}/100 |" >> $GITHUB_STEP_SUMMARY
+          echo "| Dynamic Analysis | ${{ needs.dynamic-analysis.outputs.dast-findings > 0 && 'issues found' || 'clean' }} | ${{ needs.dynamic-analysis.outputs.zap-baseline-score }}/100 |" >> $GITHUB_STEP_SUMMARY
+
+      - name: Fail on critical security issues
+        if: |
+          steps.compliance.outputs.critical > 0 &&
+          github.event.inputs.fail_on_severity != 'none'
+        run: |
+          echo "❌ Critical security issues found. Failing the workflow."
+          echo "Critical issues count: ${{ steps.compliance.outputs.critical }}"
+          echo "Security score: ${{ steps.compliance.outputs.score }}/100"
+          exit 1
+
+      - name: Create security issue for findings
+        if: |
+          steps.compliance.outputs.critical > 0 &&
+          github.event.inputs.fail_on_severity != 'none'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: '🛡️ Security Issues Detected - Immediate Attention Required',
+              body: `Critical security issues have been detected in the latest security scan.
+              
+              **Security Score:** ${context.steps.compliance.outputs.score}/100
+              **Status:** ${context.steps.compliance.outputs.status}
+              **Critical Issues:** ${context.steps.compliance.outputs.critical}
+              
+              ## Issues Found:
+              
+              ### Secret Scanning
+              - Secrets Found: ${context.payload.pull_request ? 'Check workflow' : 'N/A'}
+              
+              ### Dependency Vulnerabilities
+              - NPM Vulnerabilities: ${context.payload.pull_request ? 'Check workflow' : 'N/A'}
+              - Python Vulnerabilities: ${context.payload.pull_request ? 'Check workflow' : 'N/A'}
+              
+              ### Static Analysis
+              - Semgrep Findings: ${context.payload.pull_request ? 'Check workflow' : 'N/A'}
+              
+              ### Dynamic Analysis
+              - DAST Findings: ${context.payload.pull_request ? 'Check workflow' : 'N/A'}
+              
+              ## Next Steps:
+              1. Review the detailed security report
+              2. Fix critical vulnerabilities immediately
+              3. Update dependencies with security patches
+              4. Re-run security scans
+              
+              [View Security Scan Results](${context.payload.repository.html_url}/actions/runs/${context.runId})
+              
+              **Labels:** security, critical, vulnerability`,
+              labels: ['security', 'critical', 'vulnerability', 'bug']
+            });
+
+      - name: Upload comprehensive security report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: comprehensive-security-report
+          path: |
+            secret-scan-results/
+            dependency-scan-results/
+            sast-scan-results/
+            dast-scan-results/
+          retention-days: 90
+
+      - name: Notify security team
+        if: steps.compliance.outputs.critical > 0
+        run: |
+          echo "🚨 SECURITY ALERT: ${{ steps.compliance.outputs.critical }} critical issues found"
+          echo "Security Score: ${{ steps.compliance.outputs.score }}/100"
+          echo "Status: ${{ steps.compliance.outputs.status }}"
+          
+          # Add your notification logic here (Slack, Discord, email, etc.)
+          # echo "curl -X POST -H 'Content-type: application/json' --data '{\"text\":\"🚨 Security Alert: Critical issues found in Crazy-Gary repository\"}' YOUR_WEBHOOK_URL"

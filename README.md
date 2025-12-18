@@ -259,6 +259,169 @@ We provide templates for different types of contributions:
 - **Accessibility**: WCAG compliance for UI changes
 - **Security**: Security review for authentication/authorization changes
 
+## 🛡️ **Quality Gates & Pre-commit Hooks**
+
+Crazy Gary includes a comprehensive quality gates system with enhanced pre-commit hooks to maintain code quality, security, and development standards.
+
+### **🚀 Quick Start**
+
+```bash
+# Install quality gates
+npm run hooks:install:enhanced
+
+# Check status
+npm run quality:summary
+
+# Run quality gates manually
+npm run quality:pre-commit
+```
+
+### **✨ Features**
+
+#### **Pre-commit Hooks** (< 30 seconds)
+- ✅ **TypeScript Compilation** - Type safety validation
+- ✅ **ESLint Validation** - Code quality with auto-fix
+- ✅ **Prettier Formatting** - Code formatting consistency
+- ✅ **Code Duplication Analysis** - jscpd integration
+- ✅ **Security Scanning** - Pattern-based security checks
+- ✅ **Test Execution** - Conditional test running
+- ✅ **Complexity Analysis** - Cyclomatic complexity checking
+- ✅ **File Size Validation** - Performance impact assessment
+- ✅ **Spell Checking** - cspell integration
+
+#### **Commit Message Validation**
+- ✅ **Conventional Commits** - Format enforcement
+- ✅ **Type Validation** - feat, fix, docs, style, etc.
+- ✅ **Subject Length Limits** - 50 characters maximum
+- ✅ **Breaking Change Detection** - Automatic identification
+
+#### **Pre-push Hooks** (2-5 minutes)
+- ✅ **Full Build Validation** - Production build testing
+- ✅ **Complete Test Suite** - All tests with coverage
+- ✅ **Security Audit** - npm audit with severity levels
+- ✅ **Performance Analysis** - Bundle size validation
+- ✅ **Documentation Generation** - Automated updates
+
+### **📊 Quality Standards**
+
+| Metric | Threshold | Purpose |
+|--------|-----------|---------|
+| **Code Coverage** | ≥ 80% lines, ≥ 75% branches | Maintain test quality |
+| **Cyclomatic Complexity** | ≤ 10 | Keep code maintainable |
+| **Code Duplication** | ≤ 5% | Reduce maintenance overhead |
+| **Hook Execution Time** | ≤ 30 seconds | Maintain development flow |
+| **Security Audit Level** | Moderate | Balance security vs. usability |
+
+### **🛠️ Available Scripts**
+
+```bash
+# Quality Gates
+npm run quality:pre-commit         # Run pre-commit checks
+npm run quality:pre-commit:enhanced # Enhanced version (faster)
+npm run quality:pre-push           # Run pre-push checks
+npm run quality:full               # Run all quality checks
+npm run quality:fast               # Quick quality check
+npm run quality:validate           # Validate installation
+npm run quality:benchmark          # Performance benchmarks
+npm run quality:summary            # System overview
+
+# Security
+npm run security:scan              # Basic security scan
+npm run security:scan:enhanced     # Comprehensive scan
+npm run security:report            # Generate report
+
+# Documentation
+npm run docs:generate              # Generate docs
+npm run docs:generate:enhanced     # Enhanced docs
+npm run docs:report                # Quality report
+
+# Hook Management
+npm run hooks:install:enhanced     # Install enhanced hooks
+npm run hooks:status               # Check status
+npm run quality:manager            # Quality gate manager
+```
+
+### **⚙️ Configuration**
+
+The system uses `.quality-gates.json` for configuration:
+
+```json
+{
+  "performance": {
+    "maxHookExecutionTime": 30,
+    "fastMode": true,
+    "parallelJobs": 4
+  },
+  "coverage": {
+    "minimumLineCoverage": 80,
+    "minimumBranchCoverage": 75
+  },
+  "security": {
+    "auditLevel": "moderate",
+    "blockOnHighSeverity": true
+  }
+}
+```
+
+### **🔧 Advanced Features**
+
+#### **Performance Optimization**
+- **Fast Mode**: Optimized for speed
+- **Parallel Processing**: Multi-threaded execution
+- **Smart Caching**: ESLint and Prettier caching
+- **Conditional Execution**: Run only necessary checks
+
+#### **Security Scanning**
+- **Secret Detection**: Hardcoded credentials
+- **Vulnerability Scanning**: Dependency analysis
+- **Pattern Matching**: SQL injection, XSS detection
+- **Security Headers**: Configuration validation
+
+#### **Documentation Generation**
+- **API Docs**: TypeScript documentation
+- **Component Docs**: React component catalog
+- **Process Docs**: Development workflow
+- **Quality Reports**: Metrics and trends
+
+### **📚 Documentation**
+
+- **[Setup Guide](PRE_COMMIT_HOOKS_SETUP.md)** - Comprehensive setup instructions
+- **[Hooks Documentation](docs/hooks/README.md)** - Detailed hook information
+- **[Quality Gates Guide](docs/quality-gates/README.md)** - Quality system details
+- **[Development Process](docs/development/README.md)** - Workflow guidelines
+
+### **🎯 Best Practices**
+
+#### **For Developers**
+- Keep commits focused and small (< 50 files)
+- Write descriptive commit messages
+- Run quality gates locally before committing
+- Monitor performance metrics
+
+#### **For Teams**
+- Establish team quality standards
+- Regular configuration reviews
+- Performance monitoring
+- Continuous improvement
+
+### **🆘 Troubleshooting**
+
+```bash
+# Check installation
+npm run quality:validate
+
+# Diagnose issues
+bash scripts/quality-gate-manager.sh validate
+
+# Reinstall hooks
+npm run hooks:install:enhanced
+
+# Clean cache
+rm -rf .eslintcache node_modules/.vite
+```
+
+The quality gates system ensures that all code meets our high standards for quality, security, and maintainability while keeping the development process fast and efficient.
+
 ## 📄 **License**
 
 This project is licensed under the MIT License. See the `LICENSE` file for details.

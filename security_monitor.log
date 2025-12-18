@@ -1,0 +1,12 @@
+2025-12-17 12:10:06,339 - security_monitor - WARNING - ALERT [TEST_ALERT]: Test alert message - {"id": "alert_1765915806339593", "alert_type": "TEST_ALERT", "severity": "warning", "message": "Test alert message", "details": {}, "source_ip": "192.168.1.100", "user_agent": null, "timestamp": "2025-12-17T04:10:06.339608", "status": "active"}
+2025-12-17 12:10:06,342 - security_monitor - INFO - Request recorded: {"source_ip": "192.168.1.100", "user_agent": null, "endpoint": null, "method": null, "blocked": false, "suspicious": true}
+2025-12-17 12:10:06,342 - security_monitor - INFO - Request recorded: {"source_ip": "192.168.1.100", "user_agent": null, "endpoint": null, "method": null, "blocked": false, "suspicious": true}
+2025-12-17 12:10:06,342 - security_monitor - INFO - Request recorded: {"source_ip": "192.168.1.100", "user_agent": null, "endpoint": null, "method": null, "blocked": false, "suspicious": true}
+2025-12-17 12:10:06,342 - security_monitor - INFO - Request recorded: {"source_ip": "192.168.1.101", "user_agent": null, "endpoint": null, "method": null, "blocked": true, "suspicious": false}
+2025-12-17 12:10:06,342 - security_monitor - INFO - Request recorded: {"source_ip": "192.168.1.101", "user_agent": null, "endpoint": null, "method": null, "blocked": true, "suspicious": false}
+2025-12-17 12:10:06,342 - security_monitor - INFO - Request recorded: {"source_ip": "192.168.1.101", "user_agent": null, "endpoint": null, "method": null, "blocked": true, "suspicious": false}
+2025-12-17 12:10:06,345 - security_monitor - INFO - Request recorded: {"source_ip": "192.168.1.102", "user_agent": null, "endpoint": null, "method": null, "blocked": false, "suspicious": false}
+2025-12-17 12:10:06,345 - security_monitor - INFO - Request recorded: {"source_ip": "192.168.1.102", "user_agent": null, "endpoint": null, "method": null, "blocked": false, "suspicious": false}
+2025-12-17 12:10:06,345 - security_monitor - INFO - Request recorded: {"source_ip": "192.168.1.102", "user_agent": null, "endpoint": null, "method": null, "blocked": false, "suspicious": false}
+2025-12-17 12:12:39,609 - security_monitor - INFO - Request recorded: {"source_ip": "192.168.1.100", "user_agent": null, "endpoint": null, "method": null, "blocked": false, "suspicious": true}
+2025-12-17 12:12:39,610 - security_monitor - INFO - Request recorded: {"source_ip": "192.168.1.101", "user_agent": null, "endpoint": null, "method": null, "blocked": true, "suspicious": false}

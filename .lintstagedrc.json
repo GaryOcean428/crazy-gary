@@ -1,0 +1,26 @@
+{
+  "*.{ts,tsx}": [
+    "eslint --fix --max-warnings 0",
+    "prettier --write",
+    "npm run type-check",
+    "jscpd --threshold 5"
+  ],
+  "*.{js,jsx}": [
+    "eslint --fix --max-warnings 0",
+    "prettier --write",
+    "jscpd --threshold 5"
+  ],
+  "*.{json,md,yml,yaml}": [
+    "prettier --write",
+    "cspell lint --gitignore"
+  ],
+  "*.{css,scss,less}": [
+    "prettier --write"
+  ],
+  "package.json": [
+    "npm run validate:deps"
+  ],
+  "*.{test.ts,test.tsx,spec.ts,spec.tsx}": [
+    "npm test -- --run --reporter=verbose"
+  ]
+}

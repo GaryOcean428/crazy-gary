@@ -1,7 +1,10 @@
 'use client'
 
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react'
-import type { AuthContextType, AuthUser } from '@/types'
+import type { AuthContextType } from '@/types'
+import type { AuthUser } from '@/schemas/api'
+import { authResponseSchema } from '@/schemas/api'
+import { validateData } from '@/lib/validation'
 
 interface AuthResponse {
   success: boolean;

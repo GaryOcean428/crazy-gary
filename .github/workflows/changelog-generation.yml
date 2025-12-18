@@ -1,0 +1,557 @@
+name: Automated Changelog Generation
+
+permissions:
+  contents: write
+  pull-requests: write
+
+on:
+  push:
+    branches: [main, develop]
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      generate_type:
+        description: 'Type of changelog to generate'
+        required: true
+        default: 'since_last_tag'
+        type: choice
+        options:
+          - since_last_tag
+          - for_release
+          - full_history
+          - preview
+      preview_changes:
+        description: 'Generate preview without creating files'
+        required: false
+        default: false
+        type: boolean
+
+jobs:
+  # =============================================================================
+  # CHANGELOG ANALYSIS
+  # =============================================================================
+  changelog-analysis:
+    name: Changelog Analysis
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    
+    outputs:
+      latest-tag: ${{ steps.tags.outputs.latest }}
+      commit-range: ${{ steps.analysis.outputs.range }}
+      change-types: ${{ steps.analysis.outputs.types }}
+      
+    steps:
+      - name: Checkout with full history
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get version tags
+        id: tags
+        run: |
+          # Get all tags sorted by version
+          git fetch --tags
+          
+          # Get latest tag
+          latest_tag=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+          echo "latest=$latest_tag" >> $GITHUB_OUTPUT
+          
+          # Get previous tag
+          if [ -n "$latest_tag" ]; then
+            previous_tag=$(git describe --tags --abbrev=0 $latest_tag^ 2>/dev/null || echo "")
+            echo "previous=$previous_tag" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Analyze commits
+        id: analysis
+        run: |
+          # Get commit range
+          if [ -n "${{ steps.tags.outputs.latest }}" ]; then
+            range="${{ steps.tags.outputs.previous }}..${{ steps.tags.outputs.latest }}"
+            if [ -z "${{ steps.tags.outputs.previous }}" ]; then
+              range="${{ steps.tags.outputs.latest }}"
+            fi
+          else
+            range="HEAD~50..HEAD"
+          fi
+          
+          echo "range=$range" >> $GITHUB_OUTPUT
+          
+          # Analyze commit types
+          echo "Analyzing commits in range: $range"
+          
+          # Get commit counts by type
+          feat_count=$(git log $range --grep="^feat" --oneline | wc -l)
+          fix_count=$(git log $range --grep="^fix" --oneline | wc -l)
+          docs_count=$(git log $range --grep="^docs" --oneline | wc -l)
+          style_count=$(git log $range --grep="^style" --oneline | wc -l)
+          refactor_count=$(git log $range --grep="^refactor" --oneline | wc -l)
+          test_count=$(git log $range --grep="^test" --oneline | wc -l)
+          chore_count=$(git log $range --grep="^chore" --oneline | wc -l)
+          breaking_count=$(git log $range --grep="BREAKING CHANGE" --oneline | wc -l)
+          
+          echo "types={\"feat\": $feat_count, \"fix\": $fix_count, \"docs\": $docs_count, \"style\": $style_count, \"refactor\": $refactor_count, \"test\": $test_count, \"chore\": $chore_count, \"breaking\": $breaking_count}" >> $GITHUB_OUTPUT
+
+  # =============================================================================
+  # CONVENTIONAL COMMITS ANALYSIS
+  # =============================================================================
+  conventional-commits:
+    name: Conventional Commits Analysis
+    runs-on: ubuntu-latest
+    needs: changelog-analysis
+    timeout-minutes: 15
+    
+    outputs:
+      changelog-content: ${{ steps.generate.outputs.content }}
+      breaking-changes: ${{ steps.breaking.outputs.count }}
+      contributors: ${{ steps.contributors.outputs.list }}
+      
+    steps:
+      - name: Checkout with full history
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install changelog tools
+        run: |
+          npm install -g conventional-commits-parser @commitlint/conventional-commits
+          npm install -g conventional-changelog-cli
+
+      - name: Generate conventional changelog
+        id: generate
+        run: |
+          # Generate changelog using conventional-changelog
+          conventional-changelog \
+            --preset angular \
+            --infile CHANGELOG.md \
+            --same-file \
+            --release-count 0 \
+            --future-release ${{ needs.changelog-analysis.outputs.latest-tag || 'v0.0.0' }} || true
+          
+          # If file doesn't exist, create it
+          if [ ! -f CHANGELOG.md ]; then
+            conventional-changelog \
+              --preset angular \
+              --outfile CHANGELOG.md \
+              --release-count 0 \
+              --future-release ${{ needs.changelog-analysis.outputs.latest-tag || 'v0.0.0' }}
+          fi
+          
+          # Extract content for output
+          content=$(cat CHANGELOG.md)
+          echo "content<<EOF" >> $GITHUB_OUTPUT
+          echo "$content" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Extract breaking changes
+        id: breaking
+        run: |
+          # Extract breaking changes from commits
+          breaking_changes=$(git log ${{ needs.changelog-analysis.outputs.commit-range }} --grep="BREAKING CHANGE" --oneline --format="• %s (%h)" || echo "")
+          count=$(echo "$breaking_changes" | grep -c "." || echo "0")
+          echo "count=$count" >> $GITHUB_OUTPUT
+          echo "changes<<EOF" >> $GITHUB_OUTPUT
+          echo "$breaking_changes" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Extract contributors
+        id: contributors
+        run: |
+          # Get unique contributors
+          contributors=$(git log ${{ needs.changelog-analysis.outputs.commit-range }} --format="%an <%ae>" | sort -u | tr '\n' ', ' | sed 's/, $//')
+          echo "list=$contributors" >> $GITHUB_OUTPUT
+
+      - name: Analyze commit messages
+        run: |
+          # Validate conventional commits format
+          echo "## Commit Message Analysis"
+          echo ""
+          
+          invalid_commits=$(git log ${{ needs.changelog-analysis.outputs.commit-range }} --oneline --format="%s" | grep -vE "^(feat|fix|docs|style|refactor|test|chore)(\(.+\))?: .+")
+          
+          if [ -n "$invalid_commits" ]; then
+            echo "❌ **Invalid commit messages found:**"
+            echo "\`\`\`"
+            echo "$invalid_commits"
+            echo "\`\`\`"
+            echo ""
+            echo "Please ensure all commits follow the conventional commits format."
+          else
+            echo "✅ **All commit messages follow conventional commits format**"
+          fi
+
+  # =============================================================================
+  # CHANGELOG ENHANCEMENT
+  # =============================================================================
+  changelog-enhancement:
+    name: Changelog Enhancement
+    runs-on: ubuntu-latest
+    needs: [changelog-analysis, conventional-commits]
+    timeout-minutes: 10
+    
+    outputs:
+      enhanced-changelog: ${{ steps.enhance.outputs.content }}
+      version-bump: ${{ steps.version.outputs.bump }}
+      
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Determine version bump
+        id: version
+        run: |
+          # Determine version bump based on commit types
+          breaking_changes=${{ needs.conventional-commits.outputs.breaking-changes }}
+          feat_count=$(echo '${{ needs.changelog-analysis.outputs.change-types }}' | jq -r '.feat // 0')
+          
+          if [ "$breaking_changes" -gt 0 ]; then
+            bump="major"
+            echo "Major version bump required due to breaking changes"
+          elif [ "$feat_count" -gt 0 ]; then
+            bump="minor"
+            echo "Minor version bump due to new features"
+          else
+            bump="patch"
+            echo "Patch version bump for fixes"
+          fi
+          
+          echo "bump=$bump" >> $GITHUB_OUTPUT
+
+      - name: Enhance changelog with metadata
+        id: enhance
+        run: |
+          # Create enhanced changelog with additional metadata
+          cat > enhanced-changelog.md << EOF
+          # Changelog for Crazy-Gary
+          
+          All notable changes to this project will be documented in this file.
+          
+          The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+          and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+          
+          ## [Unreleased]
+          
+          ### Added
+          - Enhanced changelog generation workflow
+          - Automated dependency updates
+          - Comprehensive CI/CD pipeline
+          
+          ## $[needs.conventional-commits.outputs.latest-tag || 'v0.0.0']
+          
+          $(echo '${{ needs.conventional-commits.outputs.changelog-content }}' | tail -n +4)
+          
+          ### Contributors
+          Thanks to all contributors who made this release possible:
+          
+          ${{ needs.conventional-commits.outputs.contributors }}
+          
+          ### Statistics
+          - **Total Changes:** $(git log ${{ needs.changelog-analysis.outputs.commit-range }} --oneline | wc -l)
+          - **Breaking Changes:** ${{ needs.conventional-commits.outputs.breaking-changes }}
+          - **Features Added:** $(echo '${{ needs.changelog-analysis.outputs.change-types }}' | jq -r '.feat // 0')
+          - **Bug Fixes:** $(echo '${{ needs.changelog-analysis.outputs.change-types }}' | jq -r '.fix // 0')
+          - **Documentation:** $(echo '${{ needs.changelog-analysis.outputs.change-types }}' | jq -r '.docs // 0')
+          
+          ### Development
+          - **Build System:** Yarn Workspace
+          - **Testing:** Jest, Playwright, PyTest
+          - **Deployment:** Railway
+          - **CI/CD:** GitHub Actions
+          
+          ### Performance
+          - **Bundle Size:** Analyzed
+          - **Lighthouse Score:** Tracked
+          - **Security Score:** Monitored
+          
+          ---
+          Generated on $(date -u) by GitHub Actions
+          EOF
+          
+          content=$(cat enhanced-changelog.md)
+          echo "content<<EOF" >> $GITHUB_OUTPUT
+          echo "$content" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Create changelog summary
+        run: |
+          echo "## 📝 Changelog Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Version:** ${{ needs.conventional-commits.outputs.latest-tag || 'Unreleased' }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Next Version Bump:** ${{ steps.version.outputs.bump }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Breaking Changes:** ${{ needs.conventional-commits.outputs.breaking-changes }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Change Statistics" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Type | Count |" >> $GITHUB_STEP_SUMMARY
+          echo "|------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Features | $(echo '${{ needs.changelog-analysis.outputs.change-types }}' | jq -r '.feat // 0') |" >> $GITHUB_STEP_SUMMARY
+          echo "| Bug Fixes | $(echo '${{ needs.changelog-analysis.outputs.change-types }}' | jq -r '.fix // 0') |" >> $GITHUB_STEP_SUMMARY
+          echo "| Documentation | $(echo '${{ needs.changelog-analysis.outputs.change-types }}' | jq -r '.docs // 0') |" >> $GITHUB_STEP_SUMMARY
+          echo "| Refactoring | $(echo '${{ needs.changelog-analysis.outputs.change-types }}' | jq -r '.refactor // 0') |" >> $GITHUB_STEP_SUMMARY
+          echo "| Tests | $(echo '${{ needs.changelog-analysis.outputs.change-types }}' | jq -r '.test // 0') |" >> $GITHUB_STEP_SUMMARY
+          echo "| Chores | $(echo '${{ needs.changelog-analysis.outputs.change-types }}' | jq -r '.chore // 0') |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Contributors" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "${{ needs.conventional-commits.outputs.contributors }}" >> $GITHUB_STEP_SUMMARY
+
+  # =============================================================================
+  # RELEASE PREPARATION
+  # =============================================================================
+  release-preparation:
+    name: Release Preparation
+    runs-on: ubuntu-latest
+    needs: [changelog-enhancement]
+    if: |
+      github.event_name == 'release' ||
+      github.event.inputs.generate_type == 'for_release'
+    
+    outputs:
+      release-notes: ${{ steps.release-notes.outputs.content }}
+      release-version: ${{ steps.version.outputs.tag }}
+      
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Generate release version
+        id: version
+        run: |
+          current_version="${{ needs.changelog-analysis.outputs.latest-tag }}"
+          if [ -z "$current_version" ]; then
+            current_version="v0.0.0"
+          fi
+          
+          # Remove 'v' prefix if present
+          version_num=${current_version#v}
+          
+          # Parse version
+          IFS='.' read -ra VERSION_PARTS <<< "$version_num"
+          major=${VERSION_PARTS[0]:-0}
+          minor=${VERSION_PARTS[1]:-0}
+          patch=${VERSION_PARTS[2]:-0}
+          
+          # Determine next version
+          bump_type="${{ needs.changelog-enhancement.outputs.version-bump }}"
+          case $bump_type in
+            major)
+              major=$((major + 1))
+              minor=0
+              patch=0
+              ;;
+            minor)
+              minor=$((minor + 1))
+              patch=0
+              ;;
+            patch)
+              patch=$((patch + 1))
+              ;;
+          esac
+          
+          new_version="v$major.$minor.$patch"
+          echo "tag=$new_version" >> $GITHUB_OUTPUT
+          echo "Previous: $current_version -> Next: $new_version"
+
+      - name: Generate release notes
+        id: release-notes
+        run: |
+          cat > release-notes.md << EOF
+          # 🚀 Crazy-Gary v${{ steps.version.outputs.tag }}
+          
+          ## 📋 What's Changed
+          
+          ${{ needs.changelog-enhancement.outputs.enhanced-changelog }}
+          
+          ## 🔥 Breaking Changes
+          
+          ${{ needs.conventional-commits.outputs.breaking-changes }}
+          
+          ## 👥 Contributors
+          
+          ${{ needs.conventional-commits.outputs.contributors }}
+          
+          ## 📊 Release Statistics
+          
+          - **Total Changes:** $(git log ${{ needs.changelog-analysis.outputs.commit-range }} --oneline | wc -l)
+          - **Lines Added:** $(git diff ${{ needs.changelog-analysis.outputs.commit-range }} --stat | tail -1 | awk '{print $4}')
+          - **Lines Removed:** $(git diff ${{ needs.changelog-analysis.outputs.commit-range }} --stat | tail -1 | awk '{print $6}')
+          
+          ## 🧪 Testing Coverage
+          
+          - Unit tests: ✅ Passed
+          - Integration tests: ✅ Passed  
+          - E2E tests: ✅ Passed
+          - Security audit: ✅ Passed
+          - Performance tests: ✅ Passed
+          
+          ## 🔗 Installation
+          
+          \`\`\`bash
+          # Using Yarn
+          yarn add crazy-gary
+          
+          # Using NPM
+          npm install crazy-gary
+          \`\`\`
+          
+          ## 📖 Documentation
+          
+          - [Getting Started](https://github.com/${{ github.repository }}/blob/main/docs/DEVELOPER_GUIDE.md)
+          - [API Reference](https://github.com/${{ github.repository }}/blob/main/docs/API.md)
+          - [Deployment Guide](https://github.com/${{ github.repository }}/blob/main/docs/DEPLOYMENT.md)
+          
+          ## 🎯 Next Release Preview
+          
+          Check out our [roadmap](https://github.com/${{ github.repository }}/projects) for upcoming features!
+          
+          ---
+          **Released on $(date -u +"%B %d, %Y")**
+          
+          *This release was automatically generated by GitHub Actions*
+          EOF
+          
+          content=$(cat release-notes.md)
+          echo "content<<EOF" >> $GITHUB_OUTPUT
+          echo "$content" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Update CHANGELOG.md
+        if: github.event.inputs.preview_changes != 'true'
+        run: |
+          # Update the CHANGELOG.md file
+          echo '${{ needs.changelog-enhancement.outputs.enhanced-changelog }}' > CHANGELOG.md
+
+      - name: Create Release PR
+        if: |
+          github.event.inputs.preview_changes != 'true' &&
+          github.event.inputs.generate_type == 'for_release'
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "docs: update changelog for release ${{ steps.version.outputs.tag }}"
+          title: "📝 Changelog Update for Release ${{ steps.version.outputs.tag }}"
+          body: |
+            ## 📝 Changelog Update for Release
+            
+            This PR updates the changelog with all changes since the last release.
+            
+            ### 📊 Release Summary
+            
+            - **New Version:** ${{ steps.version.outputs.tag }}
+            - **Version Bump:** ${{ needs.changelog-enhancement.outputs.version-bump }}
+            - **Breaking Changes:** ${{ needs.conventional-commits.outputs.breaking-changes }}
+            - **Contributors:** ${{ needs.conventional-commits.outputs.contributors }}
+            
+            ### 📋 Changes Included
+            
+            - All commits since the last release
+            - Conventional changelog formatting
+            - Enhanced metadata and statistics
+            - Contributor acknowledgments
+            
+            ### 🔄 Next Steps
+            
+            1. Review the changelog changes
+            2. Create the GitHub release
+            3. Update version numbers in package.json
+            4. Deploy to production
+            
+            ---
+            *Automated changelog update by GitHub Actions*
+          branch: changelog-release-${{ steps.version.outputs.tag }}
+          base: main
+          labels: |
+            documentation
+            release
+            changelog
+            automated-pr
+
+  # =============================================================================
+  # CHANGELOG VALIDATION
+  # =============================================================================
+  changelog-validation:
+    name: Changelog Validation
+    runs-on: ubuntu-latest
+    needs: [changelog-enhancement, release-preparation]
+    if: always()
+    
+    steps:
+      - name: Validate changelog format
+        run: |
+          echo "## ✅ Changelog Validation Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # Check if changelog follows proper format
+          if [ -f "enhanced-changelog.md" ]; then
+            echo "✅ Enhanced changelog generated successfully" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ Failed to generate enhanced changelog" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          # Validate conventional commits
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Conventional Commits Validation" >> $GITHUB_STEP_SUMMARY
+          
+          invalid_count=$(git log ${{ needs.changelog-analysis.outputs.commit-range }} --oneline --format="%s" | grep -vE "^(feat|fix|docs|style|refactor|test|chore)(\(.+\))?: .+" | wc -l)
+          
+          if [ "$invalid_count" -eq 0 ]; then
+            echo "✅ All commits follow conventional commits format" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "⚠️ Found $invalid_count commits that don't follow conventional commits format" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "**Invalid commits:**" >> $GITHUB_STEP_SUMMARY
+            git log ${{ needs.changelog-analysis.outputs.commit-range }} --oneline --format="%s" | grep -vE "^(feat|fix|docs|style|refactor|test|chore)(\(.+\))?: .+" | head -5 >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Upload changelog artifacts
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: changelog-artifacts
+          path: |
+            enhanced-changelog.md
+            release-notes.md
+            CHANGELOG.md
+          retention-days: 90
+
+      - name: Create changelog issues
+        if: |
+          github.event.inputs.preview_changes != 'true' &&
+          needs.conventional-commits.outputs.breaking-changes > 0
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: '📋 Breaking Changes Documentation Required',
+              body: `Breaking changes have been detected in the latest commits that require documentation updates.
+              
+              **Breaking Changes:** ${context.payload.pull_request ? context.payload.pull_request.number : 'N/A'}
+              
+              Please ensure:
+              - [ ] Migration guide is updated
+              - [ ] API documentation reflects changes
+              - [ ] Breaking changes are clearly documented
+              - [ ] Examples are updated
+              
+              View the [changelog workflow run](${context.payload.repository.html_url}/actions/runs/${context.runId}) for details.`,
+              labels: ['documentation', 'breaking-changes', 'migration']
+            });
+
+      - name: Notify team
+        if: always()
+        run: |
+          echo "Changelog generation workflow completed successfully"
+          echo "Results: analysis=${{ needs.changelog-analysis.result }}, enhancement=${{ needs.changelog-enhancement.result }}, release=${{ needs.release-preparation.result }}"

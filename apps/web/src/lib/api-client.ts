@@ -1,7 +1,10 @@
 /**
- * Centralized API client with error handling, retry logic, and caching
+ * Centralized API client with error handling, retry logic, caching, and Zod validation
  * Follows best practices for React applications
  */
+
+import type { ZodSchema } from 'zod'
+import { validateApiResponse, ValidationError } from './validation'
 
 class APIError extends Error {
   constructor(message, status, response) {
@@ -10,6 +13,16 @@ class APIError extends Error {
     this.status = status
     this.response = response
   }
+}
+
+class ValidationAPIError extends APIError {
+  constructor(message: string, status: number, response: any, validationErrors: string[]) {
+    super(message, status, response)
+    this.name = 'ValidationAPIError'
+    this.validationErrors = validationErrors
+  }
+
+  validationErrors: string[]
 }
 
 class APIClient {
@@ -172,6 +185,79 @@ class APIClient {
 
   delete(url, options = {}) {
     return this.request(url, { ...options, method: 'DELETE' })
+  }
+
+  // Validated request methods
+  async validatedRequest<T>(url: string, options: any = {}, responseSchema?: ZodSchema<T>): Promise<T> {
+    const data = await this.request(url, options)
+    
+    if (responseSchema) {
+      try {
+        return validateApiResponse(responseSchema, data, `Request to ${url}`)
+      } catch (error) {
+        if (error instanceof ValidationError) {
+          throw new ValidationAPIError(error.message, 400, null, [error.message])
+        }
+        throw error
+      }
+    }
+    
+    return data
+  }
+
+  async validatedGet<T>(url: string, responseSchema?: ZodSchema<T>, options: any = {}): Promise<T> {
+    return this.validatedRequest<T>(url, { ...options, method: 'GET' }, responseSchema)
+  }
+
+  async validatedPost<T, U = any>(url: string, data: U, requestSchema?: ZodSchema<U>, responseSchema?: ZodSchema<T>): Promise<T> {
+    let requestData = data
+    
+    if (requestSchema) {
+      try {
+        requestData = requestSchema.parse(data)
+      } catch (error) {
+        throw new ValidationAPIError('Request validation failed', 400, null, [String(error)])
+      }
+    }
+    
+    return this.validatedRequest<T>(url, {
+      method: 'POST',
+      body: JSON.stringify(requestData),
+    }, responseSchema)
+  }
+
+  async validatedPut<T, U = any>(url: string, data: U, requestSchema?: ZodSchema<U>, responseSchema?: ZodSchema<T>): Promise<T> {
+    let requestData = data
+    
+    if (requestSchema) {
+      try {
+        requestData = requestSchema.parse(data)
+      } catch (error) {
+        throw new ValidationAPIError('Request validation failed', 400, null, [String(error)])
+      }
+    }
+    
+    return this.validatedRequest<T>(url, {
+      method: 'PUT',
+      body: JSON.stringify(requestData),
+    }, responseSchema)
+  }
+
+  async validatedPatch<T, U = any>(url: string, data: U, requestSchema?: ZodSchema<U>, responseSchema?: ZodSchema<T>): Promise<T> {
+    let requestData = data
+    
+    if (requestSchema) {
+      try {
+        requestData = requestSchema.parse(data)
+      } catch (error) {
+        throw new ValidationAPIError('Request validation failed', 400, null, [String(error)])
+      }
+    }
+    
+    return this.validatedRequest<T>(url, {
+      method: 'PATCH',
+      body: JSON.stringify(requestData),
+    }, responseSchema)
   }
 
   // Clear cache

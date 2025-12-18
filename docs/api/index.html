@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Crazy-Gary API Documentation Index</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 2rem;
+            background: #f8f9fa;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 3rem;
+            padding: 2rem;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 12px;
+        }
+        
+        .header h1 {
+            margin-bottom: 0.5rem;
+            font-size: 2.5rem;
+        }
+        
+        .header p {
+            opacity: 0.9;
+            font-size: 1.1rem;
+        }
+        
+        .links-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 3rem;
+        }
+        
+        .link-card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            text-decoration: none;
+            color: inherit;
+        }
+        
+        .link-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+        }
+        
+        .link-card h3 {
+            color: #667eea;
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .link-card p {
+            color: #666;
+            margin-bottom: 1rem;
+        }
+        
+        .link-card .btn {
+            display: inline-block;
+            padding: 0.5rem 1rem;
+            background: #667eea;
+            color: white;
+            text-decoration: none;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            transition: background 0.3s ease;
+        }
+        
+        .link-card .btn:hover {
+            background: #5a6fd8;
+        }
+        
+        .features {
+            background: white;
+            padding: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+        }
+        
+        .features h2 {
+            color: #333;
+            margin-bottom: 1rem;
+        }
+        
+        .features ul {
+            list-style: none;
+            padding: 0;
+        }
+        
+        .features li {
+            padding: 0.5rem 0;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .features li:last-child {
+            border-bottom: none;
+        }
+        
+        .features li::before {
+            content: "✅";
+            font-size: 1.2rem;
+        }
+        
+        .footer {
+            text-align: center;
+            color: #666;
+            padding: 2rem 0;
+            border-top: 1px solid #ddd;
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 1rem;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .links-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🚀 Crazy-Gary API</h1>
+        <p>Complete API Documentation & Resources</p>
+    </div>
+    
+    <div class="features">
+        <h2>📋 Documentation Features</h2>
+        <ul>
+            <li>Interactive API Documentation (Swagger UI)</li>
+            <li>Comprehensive Documentation Website</li>
+            <li>Complete API Reference with Examples</li>
+            <li>Authentication & Security Guide</li>
+            <li>Error Handling Documentation</li>
+            <li>Postman Collection for Testing</li>
+            <li>Usage Examples & Tutorials</li>
+            <li>API Versioning Strategy</li>
+            <li>Testing Guidelines</li>
+            <li>OpenAPI 3.0 Specification</li>
+        </ul>
+    </div>
+    
+    <div class="links-grid">
+        <a href="/docs/api" class="link-card">
+            <h3>📚 Interactive Documentation</h3>
+            <p>Explore and test all API endpoints directly in your browser with Swagger UI</p>
+            <span class="btn">Launch Interactive Docs</span>
+        </a>
+        
+        <a href="/docs/website" class="link-card">
+            <h3>🌐 Documentation Website</h3>
+            <p>Professional documentation site with guides, examples, and SDK information</p>
+            <span class="btn">View Website</span>
+        </a>
+        
+        <a href="/openapi.json" class="link-card">
+            <h3>📋 OpenAPI Specification</h3>
+            <p>Complete API specification in JSON format for code generation and integration</p>
+            <span class="btn">Download JSON</span>
+        </a>
+        
+        <a href="/openapi.yaml" class="link-card">
+            <h3>📝 OpenAPI YAML</h3>
+            <p>OpenAPI specification in YAML format for easy editing and version control</p>
+            <span class="btn">Download YAML</span>
+        </a>
+        
+        <a href="crazy-gary-api.postman_collection.json" class="link-card">
+            <h3>🧪 Postman Collection</h3>
+            <p>Ready-to-use Postman collection with all endpoints and authentication setup</p>
+            <span class="btn">Download Collection</span>
+        </a>
+        
+        <a href="api-reference.md" class="link-card">
+            <h3>📖 API Reference</h3>
+            <p>Comprehensive reference guide with detailed endpoint documentation</p>
+            <span class="btn">View Reference</span>
+        </a>
+        
+        <a href="authentication.md" class="link-card">
+            <h3>🔐 Authentication Guide</h3>
+            <p>Complete guide to API authentication and authorization methods</p>
+            <span class="btn">View Guide</span>
+        </a>
+        
+        <a href="usage-examples.md" class="link-card">
+            <h3>💡 Usage Examples</h3>
+            <p>Step-by-step tutorials and code examples for common use cases</p>
+            <span class="btn">View Examples</span>
+        </a>
+        
+        <a href="error-handling.md" class="link-card">
+            <h3>❌ Error Handling</h3>
+            <p>Complete guide to API error codes and handling patterns</p>
+            <span class="btn">View Guide</span>
+        </a>
+        
+        <a href="testing-guidelines.md" class="link-card">
+            <h3>🧪 Testing Guidelines</h3>
+            <p>Best practices for testing API endpoints and integration</p>
+            <span class="btn">View Guidelines</span>
+        </a>
+        
+        <a href="security.md" class="link-card">
+            <h3>🔒 Security Guide</h3>
+            <p>Security best practices, rate limiting, and protection mechanisms</p>
+            <span class="btn">View Security</span>
+        </a>
+        
+        <a href="api-versioning.md" class="link-card">
+            <h3>📦 API Versioning</h3>
+            <p>API versioning strategy and migration guidelines</p>
+            <span class="btn">View Versioning</span>
+        </a>
+    </div>
+    
+    <div class="footer">
+        <p>Crazy-Gary API v1.0.0 | Complete Documentation System</p>
+        <p>Built with Flask, OpenAPI 3.0, and modern web technologies</p>
+    </div>
+</body>
+</html>

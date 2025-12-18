@@ -1,0 +1,544 @@
+name: Branch Protection and Quality Gates
+
+permissions:
+  contents: read
+  pull-requests: write
+  checks: write
+
+on:
+  pull_request:
+    branches: [main, develop]
+  push:
+    branches: [main, develop]
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: 'Branch to protect'
+        required: true
+        type: string
+      action:
+        description: 'Action to perform'
+        required: true
+        type: choice
+        options:
+          - protect
+          - unprotect
+          - update-rules
+          - status-check
+
+env:
+  MAIN_BRANCH: main
+  DEVELOP_BRANCH: develop
+  REQUIRED_CHECKS: |
+    comprehensive-ci-cd
+    enhanced-security-scanning
+    visual-regression
+    dependency-updates
+    changelog-generation
+
+jobs:
+  # =============================================================================
+  # BRANCH PROTECTION STATUS
+  # =============================================================================
+  branch-protection-status:
+    name: Branch Protection Status
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    
+    outputs:
+      main-protected: ${{ steps.check-main.outputs.protected }}
+      develop-protected: ${{ steps.check-develop.outputs.protected }}
+      protection-rules: ${{ steps.rules.outputs.json }}
+      
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Check main branch protection
+        id: check-main
+        run: |
+          # Check if main branch is protected
+          if gh api repos/${{ github.repository }}/branches/${{ env.MAIN_BRANCH }}/protection --jq '.required_status_checks.contexts' > /dev/null 2>&1; then
+            echo "protected=true" >> $GITHUB_OUTPUT
+            echo "✅ Main branch is protected"
+          else
+            echo "protected=false" >> $GITHUB_OUTPUT
+            echo "❌ Main branch is not protected"
+          fi
+
+      - name: Check develop branch protection
+        id: check-develop
+        run: |
+          # Check if develop branch is protected
+          if gh api repos/${{ github.repository }}/branches/${{ env.DEVELOP_BRANCH }}/protection --jq '.required_status_checks.contexts' > /dev/null 2>&1; then
+            echo "protected=true" >> $GITHUB_OUTPUT
+            echo "✅ Develop branch is protected"
+          else
+            echo "protected=false" >> $GITHUB_OUTPUT
+            echo "❌ Develop branch is not protected"
+          fi
+
+      - name: Get current protection rules
+        id: rules
+        run: |
+          # Get current protection rules
+          if [ "${{ steps.check-main.outputs.protected }}" = "true" ]; then
+            gh api repos/${{ github.repository }}/branches/${{ env.MAIN_BRANCH }}/protection --jq '{
+              required_status_checks: {
+                strict: .required_status_checks.strict,
+                contexts: .required_status_checks.contexts
+              },
+              enforce_admins: .enforce_admins.enabled,
+              required_pull_request_reviews: {
+                required_approving_review_count: .required_pull_request_reviews.required_approving_review_count,
+                dismiss_stale_reviews: .required_pull_request_reviews.dismiss_stale_reviews,
+                require_code_owner_reviews: .required_pull_request_reviews.require_code_owner_reviews
+              },
+              restrictions: .restrictions
+            }' > protection-rules.json
+          else
+            echo '{}' > protection-rules.json
+          fi
+          
+          echo "json=$(cat protection-rules.json)" >> $GITHUB_OUTPUT
+
+  # =============================================================================
+  # UPDATE BRANCH PROTECTION RULES
+  # =============================================================================
+  update-branch-protection:
+    name: Update Branch Protection
+    runs-on: ubuntu-latest
+    needs: branch-protection-status
+    if: github.event.inputs.action == 'protect' || github.event.inputs.action == 'update-rules'
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup GitHub CLI
+        run: |
+          type gh >/dev/null 2>&1 || {
+            curl -sSfL https://cli.github.com/packages/githubcli-archive-keyring.gpg | dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg
+            chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg
+            echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | tee /etc/apt/sources.list.d/github-cli.list > /dev/null
+            apt update
+            apt install gh
+          }
+
+      - name: Configure branch protection for main
+        run: |
+          echo "Configuring branch protection for main branch..."
+          
+          # Enable branch protection
+          gh api repos/${{ github.repository }}/branches/${{ env.MAIN_BRANCH }}/protection \
+            --method PUT \
+            --field required_status_checks='{"strict":true,"contexts":["comprehensive-ci-cd","enhanced-security-scanning","changelog-generation"]}' \
+            --field enforce_admins=true \
+            --field required_pull_request_reviews='{"required_approving_review_count":2,"dismiss_stale_reviews":true,"require_code_owner_reviews":true}' \
+            --field restrictions='{"users":[],"teams":[],"apps":[]}'
+          
+          echo "✅ Branch protection configured for main branch"
+
+      - name: Configure branch protection for develop
+        run: |
+          echo "Configuring branch protection for develop branch..."
+          
+          # Enable branch protection with relaxed rules
+          gh api repos/${{ github.repository }}/branches/${{ env.DEVELOP_BRANCH }}/protection \
+            --method PUT \
+            --field required_status_checks='{"strict":true,"contexts":["comprehensive-ci-cd","enhanced-security-scanning"]}' \
+            --field enforce_admins=false \
+            --field required_pull_request_reviews='{"required_approving_review_count":1,"dismiss_stale_reviews":false,"require_code_owner_reviews":false}' \
+            --field restrictions='{"users":[],"teams":[],"apps":[]}'
+          
+          echo "✅ Branch protection configured for develop branch"
+
+      - name: Create protection summary
+        run: |
+          echo "## 🔒 Branch Protection Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Main Branch Protection" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ **Status:** Protected" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ **Required Reviews:** 2" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ **Dismiss Stale Reviews:** Enabled" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ **Require Code Owner Review:** Enabled" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ **Enforce for Admins:** Enabled" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Develop Branch Protection" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ **Status:** Protected" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ **Required Reviews:** 1" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ **Dismiss Stale Reviews:** Disabled" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ **Require Code Owner Review:** Disabled" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ **Enforce for Admins:** Disabled" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Required Status Checks" >> $GITHUB_STEP_SUMMARY
+          echo "**Main Branch:**" >> $GITHUB_STEP_SUMMARY
+          echo "- comprehensive-ci-cd" >> $GITHUB_STEP_SUMMARY
+          echo "- enhanced-security-scanning" >> $GITHUB_STEP_SUMMARY
+          echo "- changelog-generation" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Develop Branch:**" >> $GITHUB_STEP_SUMMARY
+          echo "- comprehensive-ci-cd" >> $GITHUB_STEP_SUMMARY
+          echo "- enhanced-security-scanning" >> $GITHUB_STEP_SUMMARY
+
+  # =============================================================================
+  # QUALITY GATE VALIDATION
+  # =============================================================================
+  quality-gate-validation:
+    name: Quality Gate Validation
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    
+    outputs:
+      quality-score: ${{ steps.calculate.outputs.score }}
+      gate-passed: ${{ steps.calculate.outputs.passed }}
+      required-checks: ${{ steps.checks.outputs.list }}
+      
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Get PR information
+        run: |
+          echo "PR: ${{ github.event.pull_request.number }}"
+          echo "Title: ${{ github.event.pull_request.title }}"
+          echo "Author: ${{ github.event.pull_request.user.login }}"
+          echo "Base: ${{ github.event.pull_request.base.ref }}"
+
+      - name: Validate commit messages
+        id: commits
+        run: |
+          # Get commit messages from the PR
+          COMMITS=$(gh pr view ${{ github.event.pull_request.number }} --json commits --jq '.commits[].messageHeadline')
+          
+          echo "## Commit Message Validation" >> $GITHUB_STEP_SUMMARY
+          
+          invalid_commits=""
+          for commit in $COMMITS; do
+            if ! echo "$commit" | grep -qE "^(feat|fix|docs|style|refactor|test|chore)(\(.+\))?: .+"; then
+              invalid_commits="$invalid_commits\n  - $commit"
+            fi
+          done
+          
+          if [ -n "$invalid_commits" ]; then
+            echo "❌ **Invalid commit messages found:**" >> $GITHUB_STEP_SUMMARY
+            echo -e "$invalid_commits" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "Please ensure all commits follow the conventional commits format." >> $GITHUB_STEP_SUMMARY
+          else
+            echo "✅ **All commit messages follow conventional commits format**" >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Check PR requirements
+        id: requirements
+        run: |
+          echo "## PR Requirements Check" >> $GITHUB_STEP_SUMMARY
+          
+          # Check if PR has description
+          if [ -n "${{ github.event.pull_request.body }}" ]; then
+            echo "✅ **PR has description**" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ **PR is missing description**" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          # Check if PR has linked issue
+          if gh pr view ${{ github.event.pull_request.number }} --json closingIssuesReferences --jq '.closingIssuesReferences | length' | grep -q '[1-9]'; then
+            echo "✅ **PR is linked to issue(s)**" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "⚠️ **PR is not linked to any issues**" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          # Check PR size
+          CHANGED_FILES=$(gh pr view ${{ github.event.pull_request.number }} --json changedFiles --jq '.changedFiles')
+          if [ "$CHANGED_FILES" -gt 100 ]; then
+            echo "⚠️ **Large PR:** $CHANGED_FILES files changed (consider splitting)" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "✅ **PR size:** $CHANGED_FILES files changed" >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Check code owner reviews
+        run: |
+          echo "## Code Owner Review Check" >> $GITHUB_STEP_SUMMARY
+          
+          # Check if code owner review is required
+          if [ "${{ github.event.pull_request.base.ref }}" = "main" ]; then
+            if gh pr view ${{ github.event.pull_request.number }} --json reviews --jq '.reviews[] | select(.author.login == "crazy-gary-codeowners[bot]")' | grep -q .; then
+              echo "✅ **Code owner review completed**" >> $GITHUB_STEP_SUMMARY
+            else
+              echo "❌ **Code owner review required**" >> $GITHUB_STEP_SUMMARY
+            fi
+          else
+            echo "ℹ️ **Code owner review not required for develop branch**" >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Calculate quality score
+        id: calculate
+        run: |
+          # Calculate quality score based on various factors
+          score=0
+          
+          # Base score
+          score=50
+          
+          # Add points for good practices
+          if [ -n "${{ github.event.pull_request.body }}" ]; then
+            score=$((score + 10))
+          fi
+          
+          # Check if PR is linked to issues
+          if gh pr view ${{ github.event.pull_request.number }} --json closingIssuesReferences --jq '.closingIssuesReferences | length' | grep -q '[1-9]'; then
+            score=$((score + 10))
+          fi
+          
+          # Check commit messages
+          commits=$(gh pr view ${{ github.event.pull_request.number }} --json commits --jq '.commits[].messageHeadline')
+          valid_commits=$(echo "$commits" | grep -cE "^(feat|fix|docs|style|refactor|test|chore)(\(.+\))?: .+" || echo "0")
+          total_commits=$(echo "$commits" | wc -l)
+          
+          if [ "$total_commits" -gt 0 ]; then
+            commit_ratio=$((valid_commits * 100 / total_commits))
+            score=$((score + commit_ratio / 2))
+          fi
+          
+          # Check PR size (penalty for large PRs)
+          changed_files=$(gh pr view ${{ github.event.pull_request.number }} --json changedFiles --jq '.changedFiles')
+          if [ "$changed_files" -gt 50 ]; then
+            score=$((score - 10))
+          elif [ "$changed_files" -gt 20 ]; then
+            score=$((score - 5))
+          fi
+          
+          # Ensure score doesn't exceed 100
+          score=$((score > 100 ? 100 : score))
+          
+          echo "score=$score" >> $GITHUB_OUTPUT
+          
+          # Determine if gate passes (70% threshold)
+          if [ "$score" -ge 70 ]; then
+            echo "passed=true" >> $GITHUB_OUTPUT
+          else
+            echo "passed=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: List required checks
+        id: checks
+        run: |
+          echo "main=${{ env.MAIN_BRANCH }}:" >> $GITHUB_OUTPUT
+          echo "comprehensive-ci-cd" >> $GITHUB_OUTPUT
+          echo "enhanced-security-scanning" >> $GITHUB_OUTPUT
+          echo "changelog-generation" >> $GITHUB_OUTPUT
+          echo "" >> $GITHUB_OUTPUT
+          echo "develop=${{ env.DEVELOP_BRANCH }}:" >> $GITHUB_OUTPUT
+          echo "comprehensive-ci-cd" >> $GITHUB_OUTPUT
+          echo "enhanced-security-scanning" >> $GITHUB_OUTPUT
+
+      - name: Quality gate summary
+        run: |
+          echo "## 🎯 Quality Gate Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Quality Score:** ${{ steps.calculate.outputs.score }}/100" >> $GITHUB_STEP_SUMMARY
+          echo "**Status:** ${{ steps.calculate.outputs.passed == 'true' && '✅ PASSED' || '❌ FAILED' }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          if [ "${{ steps.calculate.outputs.passed }}" = "false" ]; then
+            echo "### 🔧 Recommendations to Improve Score:" >> $GITHUB_STEP_SUMMARY
+            echo "- Add a descriptive PR description" >> $GITHUB_STEP_SUMMARY
+            echo "- Link PR to relevant issues" >> $GITHUB_STEP_SUMMARY
+            echo "- Use conventional commit messages" >> $GITHUB_STEP_SUMMARY
+            echo "- Keep PRs focused and smaller" >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Fail on quality gate failure
+        if: steps.calculate.outputs.passed != 'true'
+        run: |
+          echo "Quality gate failed with score: ${{ steps.calculate.outputs.score }}/100"
+          echo "Please address the quality issues before merging."
+          exit 1
+
+  # =============================================================================
+  # STATUS CHECK ORCHESTRATION
+  # =============================================================================
+  status-check-orchestration:
+    name: Status Check Orchestration
+    runs-on: ubuntu-latest
+    needs: [branch-protection-status, quality-gate-validation]
+    if: github.event_name == 'pull_request'
+    
+    steps:
+      - name: Orchestrate status checks
+        run: |
+          echo "## 🔄 Status Check Orchestration" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Target Branch:** ${{ github.event.pull_request.base.ref }}" >> $GITHUB_STEP_SUMMARY
+          echo "**PR Number:** ${{ github.event.pull_request.number }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          if [ "${{ github.event.pull_request.base.ref }}" = "${{ env.MAIN_BRANCH }}" ]; then
+            echo "### Required Status Checks for Main Branch:" >> $GITHUB_STEP_SUMMARY
+            echo "- ✅ comprehensive-ci-cd" >> $GITHUB_STEP_SUMMARY
+            echo "- ✅ enhanced-security-scanning" >> $GITHUB_STEP_SUMMARY
+            echo "- ✅ changelog-generation" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### PR Requirements for Main Branch:" >> $GITHUB_STEP_SUMMARY
+            echo "- ✅ 2 Code owner approvals required" >> $GITHUB_STEP_SUMMARY
+            echo "- ✅ All status checks must pass" >> $GITHUB_STEP_SUMMARY
+            echo "- ✅ Up-to-date with base branch" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "### Required Status Checks for Develop Branch:" >> $GITHUB_STEP_SUMMARY
+            echo "- ✅ comprehensive-ci-cd" >> $GITHUB_STEP_SUMMARY
+            echo "- ✅ enhanced-security-scanning" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### PR Requirements for Develop Branch:" >> $GITHUB_STEP_SUMMARY
+            echo "- ✅ 1 Code owner approval required" >> $GITHUB_STEP_SUMMARY
+            echo "- ✅ All status checks must pass" >> $GITHUB_STEP_SUMMARY
+            echo "- ✅ Up-to-date with base branch" >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Update PR status
+        run: |
+          # Update PR status based on quality gate results
+          if [ "${{ needs.quality-gate-validation.outputs.gate-passed }}" = "true" ]; then
+            gh pr comment ${{ github.event.pull_request.number }} --body "✅ **Quality Gate Passed** - PR meets all quality requirements."
+          else
+            gh pr comment ${{ github.event.pull_request.number }} --body "❌ **Quality Gate Failed** - Please address the quality issues before merging."
+          fi
+
+      - name: Create branch protection documentation
+        run: |
+          # Create documentation about branch protection rules
+          cat > BRANCH_PROTECTION_RULES.md << EOF
+          # Branch Protection Rules
+          
+          This document describes the branch protection rules for the Crazy-Gary repository.
+          
+          ## Main Branch (${{ env.MAIN_BRANCH }})
+          
+          ### Status Checks
+          - ✅ comprehensive-ci-cd
+          - ✅ enhanced-security-scanning  
+          - ✅ changelog-generation
+          
+          ### Review Requirements
+          - **Required Approving Reviews:** 2
+          - **Dismiss Stale Reviews:** Enabled
+          - **Require Code Owner Reviews:** Enabled
+          - **Enforce for Admins:** Enabled
+          
+          ### PR Requirements
+          - All status checks must pass
+          - PR must be up-to-date with base branch
+          - No merge commits in PR
+          - Conventional commit messages required
+          
+          ## Develop Branch (${{ env.DEVELOP_BRANCH }})
+          
+          ### Status Checks
+          - ✅ comprehensive-ci-cd
+          - ✅ enhanced-security-scanning
+          
+          ### Review Requirements
+          - **Required Approving Reviews:** 1
+          - **Dismiss Stale Reviews:** Disabled
+          - **Require Code Owner Reviews:** Disabled
+          - **Enforce for Admins:** Disabled
+          
+          ### PR Requirements
+          - All status checks must pass
+          - PR must be up-to-date with base branch
+          - No merge commits in PR
+          - Conventional commit messages required
+          
+          ## Quality Gate Criteria
+          
+          The quality gate evaluates PRs based on:
+          
+          1. **PR Description** (10 points)
+          2. **Linked Issues** (10 points)
+          3. **Commit Messages** (0-20 points based on conventional commits)
+          4. **PR Size** (bonus/penalty based on number of changed files)
+          
+          **Minimum Score:** 70/100
+          
+          ## How to Ensure PRs Pass
+          
+          1. Follow conventional commit format
+          2. Add descriptive PR descriptions
+          3. Link PRs to relevant issues
+          4. Keep PRs focused and reasonable in size
+          5. Ensure all tests and checks pass
+          6. Get required approvals
+          
+          ---
+          Last updated: $(date -u)
+          EOF
+
+      - name: Upload branch protection documentation
+        uses: actions/upload-artifact@v4
+        with:
+          name: branch-protection-documentation
+          path: BRANCH_PROTECTION_RULES.md
+          retention-days: 90
+
+  # =============================================================================
+  # BRANCH PROTECTION NOTIFICATION
+  # =============================================================================
+  notification:
+    name: Branch Protection Notification
+    runs-on: ubuntu-latest
+    needs: [branch-protection-status, quality-gate-validation, status-check-orchestration]
+    if: always()
+    
+    steps:
+      - name: Generate notification summary
+        run: |
+          echo "## 🔒 Branch Protection Status Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Main Branch Protection:** ${{ needs.branch-protection-status.outputs.main-protected }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Develop Branch Protection:** ${{ needs.branch-protection-status.outputs.develop-protected }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "**Quality Gate Result:** ${{ needs.quality-gate-validation.outputs.gate-passed }}" >> $GITHUB_STEP_SUMMARY
+            echo "**Quality Score:** ${{ needs.quality-gate-validation.outputs.quality-score }}/100" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📋 Actions Performed" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Branch protection status checked" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Quality gate validation completed" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Status check orchestration configured" >> $GITHUB_STEP_SUMMARY
+
+      - name: Notify on protection issues
+        if: |
+          needs.branch-protection-status.outputs.main-protected != 'true' ||
+          needs.branch-protection-status.outputs.develop-protected != 'true'
+        run: |
+          echo "⚠️ Some branches are not protected. Please review branch protection settings."
+          
+          # Create issue for unprotected branches
+          gh issue create \
+            --title "🔒 Branch Protection Configuration Required" \
+            --body "The following branches are not protected and should be configured with proper protection rules:
+            
+            - Main branch (${{ env.MAIN_BRANCH }}): ${{ needs.branch-protection-status.outputs.main-protected }}
+            - Develop branch (${{ env.DEVELOP_BRANCH }}): ${{ needs.branch-protection-status.outputs.develop-protected }}
+            
+            Please configure branch protection rules to ensure code quality and security.
+            
+            Run the 'Branch Protection and Quality Gates' workflow with action 'protect' to automatically configure protection rules." \
+            --label "security,configuration,branch-protection"
+
+      - name: Slack notification
+        if: failure()
+        run: |
+          echo "🚨 Branch protection workflow failed"
+          echo "Please check the workflow logs for details."
+          
+          # Add your notification logic here
+          # curl -X POST -H 'Content-type: application/json' \
+          #   --data "{\"text\":\"🚨 Branch Protection Workflow Failed for Crazy-Gary\"}" \
+          #   ${{ secrets.SLACK_WEBHOOK_URL }}

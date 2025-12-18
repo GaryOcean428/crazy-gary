@@ -1,0 +1,1557 @@
+{
+	"info": {
+		"_postman_id": "crazy-gary-api-collection",
+		"name": "Crazy-Gary API",
+		"description": "Comprehensive API collection for the Crazy-Gary application - an AI-powered development assistant with agent orchestration, model management, and comprehensive monitoring capabilities.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Health Checks",
+			"description": "Health check endpoints for service monitoring",
+			"item": [
+				{
+					"name": "Basic Health Check",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/health",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"health"
+							]
+						},
+						"description": "Basic health check endpoint for service monitoring"
+					},
+					"response": []
+				},
+				{
+					"name": "Readiness Check",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/health/ready",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"health",
+								"ready"
+							]
+						},
+						"description": "Checks if service is ready to accept requests"
+					},
+					"response": []
+				},
+				{
+					"name": "Liveness Check",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/health/live",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"health",
+								"live"
+							]
+						},
+						"description": "Simple alive/dead status check"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Authentication",
+			"description": "User authentication and authorization endpoints",
+			"item": [
+				{
+					"name": "Register User",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"user@example.com\",\n  \"password\": \"SecurePassword123\",\n  \"fullName\": \"John Doe\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/register",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"register"
+							]
+						},
+						"description": "Register a new user account"
+					},
+					"response": []
+				},
+				{
+					"name": "User Login",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"{{userEmail}}\",\n  \"password\": \"{{userPassword}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/login",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"login"
+							]
+						},
+						"description": "Authenticate user and receive tokens"
+					},
+					"response": []
+				},
+				{
+					"name": "Refresh Token",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{refreshToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/refresh",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"refresh"
+							]
+						},
+						"description": "Refresh access token using refresh token"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Current User",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/me",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"me"
+							]
+						},
+						"description": "Get current user profile"
+					},
+					"response": []
+				},
+				{
+					"name": "Update Profile",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"name\": \"Jane Doe\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/me",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"me"
+							]
+						},
+						"description": "Update current user profile"
+					},
+					"response": []
+				},
+				{
+					"name": "Change Password",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"current_password\": \"{{currentPassword}}\",\n  \"new_password\": \"{{newPassword}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/change-password",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"change-password"
+							]
+						},
+						"description": "Change user password"
+					},
+					"response": []
+				},
+				{
+					"name": "Validate Token",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/validate",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"validate"
+							]
+						},
+						"description": "Validate current token and get user info"
+					},
+					"response": []
+				},
+				{
+					"name": "User Logout",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/logout",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"logout"
+							]
+						},
+						"description": "Logout user (client-side token removal)"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "User Management",
+			"description": "User management endpoints (admin only)",
+			"item": [
+				{
+					"name": "Get All Users",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/users",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"users"
+							]
+						},
+						"description": "Get a list of all users (admin only)"
+					},
+					"response": []
+				},
+				{
+					"name": "Create User",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"username\": \"newuser\",\n  \"email\": \"newuser@example.com\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/users",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"users"
+							]
+						},
+						"description": "Create a new user (admin only)"
+					},
+					"response": []
+				},
+				{
+					"name": "Get User by ID",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/users/{{userId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"users",
+								"{{userId}}"
+							]
+						},
+						"description": "Get a specific user by ID"
+					},
+					"response": []
+				},
+				{
+					"name": "Update User",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"username\": \"updateduser\",\n  \"email\": \"updated@example.com\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/users/{{userId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"users",
+								"{{userId}}"
+							]
+						},
+						"description": "Update user information"
+					},
+					"response": []
+				},
+				{
+					"name": "Delete User",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/users/{{userId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"users",
+								"{{userId}}"
+							]
+						},
+						"description": "Delete a user"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Agent Orchestration",
+			"description": "AI agent task management and execution",
+			"item": [
+				{
+					"name": "Create Task",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"title\": \"Analyze code repository\",\n  \"description\": \"Scan the repository for potential security vulnerabilities\",\n  \"model\": \"gpt-oss-120b\",\n  \"priority\": \"high\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/tasks",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"tasks"
+							]
+						},
+						"description": "Create a new AI agent task"
+					},
+					"response": []
+				},
+				{
+					"name": "Get All Tasks",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/tasks",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"tasks"
+							]
+						},
+						"description": "Get a list of all tasks"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Task by ID",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/tasks/{{taskId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"tasks",
+								"{{taskId}}"
+							]
+						},
+						"description": "Get details of a specific task"
+					},
+					"response": []
+				},
+				{
+					"name": "Start Task",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/tasks/{{taskId}}/start",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"tasks",
+								"{{taskId}}",
+								"start"
+							]
+						},
+						"description": "Start executing a created task"
+					},
+					"response": []
+				},
+				{
+					"name": "Stop Task",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/tasks/{{taskId}}/stop",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"tasks",
+								"{{taskId}}",
+								"stop"
+							]
+						},
+						"description": "Stop a running task"
+					},
+					"response": []
+				},
+				{
+					"name": "Chat with Agent",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"message\": \"What can you help me with?\",\n  \"context\": \"I'm working on a Python project\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/chat",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"chat"
+							]
+						},
+						"description": "Send a message to the AI agent and get a response"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Agent Statistics",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/stats",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"stats"
+							]
+						},
+						"description": "Get statistics about agent performance and usage"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Endpoint Management",
+			"description": "HuggingFace inference endpoint management",
+			"item": [
+				{
+					"name": "Get All Endpoint Status",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/endpoints/status",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"endpoints",
+								"status"
+							]
+						},
+						"description": "Get status of all HuggingFace inference endpoints"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Specific Endpoint Status",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/endpoints/status/{{modelType}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"endpoints",
+								"status",
+								"{{modelType}}"
+							]
+						},
+						"description": "Get status of a specific model endpoint",
+						"variable": [
+							{
+								"key": "modelType",
+								"value": "120b",
+								"description": "Model type (120b or 20b)"
+							}
+						]
+					},
+					"response": []
+				},
+				{
+					"name": "Wake All Endpoints",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/endpoints/wake",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"endpoints",
+								"wake"
+							]
+						},
+						"description": "Wake up all sleeping HuggingFace endpoints"
+					},
+					"response": []
+				},
+				{
+					"name": "Wake Specific Endpoint",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/endpoints/wake/{{modelType}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"endpoints",
+								"wake",
+								"{{modelType}}"
+							]
+						},
+						"description": "Wake up a specific HuggingFace endpoint",
+						"variable": [
+							{
+								"key": "modelType",
+								"value": "120b",
+								"description": "Model type (120b or 20b)"
+							}
+						]
+					},
+					"response": []
+				},
+				{
+					"name": "Sleep All Endpoints",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/endpoints/sleep",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"endpoints",
+								"sleep"
+							]
+						},
+						"description": "Put all running HuggingFace endpoints to sleep"
+					},
+					"response": []
+				},
+				{
+					"name": "Sleep Specific Endpoint",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/endpoints/sleep/{{modelType}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"endpoints",
+								"sleep",
+								"{{modelType}}"
+							]
+						},
+						"description": "Put a specific HuggingFace endpoint to sleep",
+						"variable": [
+							{
+								"key": "modelType",
+								"value": "120b",
+								"description": "Model type (120b or 20b)"
+							}
+						]
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "MCP Integration",
+			"description": "Model Context Protocol integration",
+			"item": [
+				{
+					"name": "Get All MCP Tools",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/mcp/tools",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"mcp",
+								"tools"
+							]
+						},
+						"description": "Get a list of all available Model Context Protocol tools"
+					},
+					"response": []
+				},
+				{
+					"name": "Get MCP Tools for Client",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/mcp/tools/{{clientName}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"mcp",
+								"tools",
+								"{{clientName}}"
+							]
+						},
+						"description": "Get tools available for a specific MCP client",
+						"variable": [
+							{
+								"key": "clientName",
+								"value": "github",
+								"description": "MCP client name"
+							}
+						]
+					},
+					"response": []
+				},
+				{
+					"name": "Search MCP Tools",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/mcp/tools/search?query={{searchQuery}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"mcp",
+								"tools",
+								"search"
+							],
+							"query": [
+								{
+									"key": "query",
+									"value": "{{searchQuery}}"
+								}
+							]
+						},
+						"description": "Search for MCP tools by name or description",
+						"variable": [
+							{
+								"key": "searchQuery",
+								"value": "code",
+								"description": "Search query"
+							}
+						]
+					},
+					"response": []
+				},
+				{
+					"name": "Execute MCP Tool",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"tool_name\": \"search_code\",\n  \"client_name\": \"github\",\n  \"parameters\": {\n    \"query\": \"security vulnerability\",\n    \"repository\": \"owner/repo\"\n  }\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/mcp/execute",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"mcp",
+								"execute"
+							]
+						},
+						"description": "Execute a specific MCP tool with parameters"
+					},
+					"response": []
+				},
+				{
+					"name": "Get MCP Status",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/mcp/status",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"mcp",
+								"status"
+							]
+						},
+						"description": "Get MCP integration status"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Heavy Orchestration",
+			"description": "Complex task orchestration and execution",
+			"item": [
+				{
+					"name": "Start Heavy Orchestration",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"workflow\": [\n    {\n      \"step\": 1,\n      \"tool\": \"code_analyzer\",\n      \"parameters\": {\n        \"target\": \"src/\",\n        \"type\": \"security\"\n      }\n    },\n    {\n      \"step\": 2,\n      \"tool\": \"report_generator\",\n      \"parameters\": {\n        \"format\": \"pdf\",\n        \"include_recommendations\": true\n      }\n    }\n  ],\n  \"config\": {\n    \"timeout\": 3600,\n    \"parallel\": false\n  }\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/heavy/orchestrate",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"heavy",
+								"orchestrate"
+							]
+						},
+						"description": "Start a heavy orchestration workflow"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Orchestration Progress",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/heavy/progress?orchestration_id={{orchestrationId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"heavy",
+								"progress"
+							],
+							"query": [
+								{
+									"key": "orchestration_id",
+									"value": "{{orchestrationId}}"
+								}
+							]
+						},
+						"description": "Get progress of heavy orchestration tasks",
+						"variable": [
+							{
+								"key": "orchestrationId",
+								"value": "orch_123",
+								"description": "Specific orchestration ID to check"
+							}
+						]
+					},
+					"response": []
+				},
+				{
+					"name": "Get Available Tools",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/heavy/tools",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"heavy",
+								"tools"
+							]
+						},
+						"description": "Get list of available orchestration tools"
+					},
+					"response": []
+				},
+				{
+					"name": "Execute Tool",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"tool_name\": \"code_analyzer\",\n  \"parameters\": {\n    \"target\": \"src/\",\n    \"type\": \"security\"\n  }\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/heavy/tools/execute",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"heavy",
+								"tools",
+								"execute"
+							]
+						},
+						"description": "Execute a specific orchestration tool"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Monitoring",
+			"description": "System monitoring and health checks",
+			"item": [
+				{
+					"name": "Basic Health Monitoring",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/monitoring/health",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"monitoring",
+								"health"
+							]
+						},
+						"description": "Get basic health status of the system"
+					},
+					"response": []
+				},
+				{
+					"name": "Detailed Health Monitoring",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/monitoring/health/detailed",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"monitoring",
+								"health",
+								"detailed"
+							]
+						},
+						"description": "Get detailed health status including component status"
+					},
+					"response": []
+				},
+				{
+					"name": "Get System Metrics",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/monitoring/metrics",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"monitoring",
+								"metrics"
+							]
+						},
+						"description": "Get various system performance metrics"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Request Logs",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/monitoring/logs/requests",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"monitoring",
+								"logs",
+								"requests"
+							]
+						},
+						"description": "Get recent HTTP request logs"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Error Logs",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/monitoring/logs/errors",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"monitoring",
+								"logs",
+								"errors"
+							]
+						},
+						"description": "Get recent error logs"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Active Alerts",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/monitoring/alerts",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"monitoring",
+								"alerts"
+							]
+						},
+						"description": "Get list of active system alerts"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Comprehensive Monitoring",
+			"description": "Advanced monitoring with incidents and alerts",
+			"item": [
+				{
+					"name": "Get Monitoring Dashboard Data",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/monitoring/health/dashboard",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"monitoring",
+								"health",
+								"dashboard"
+							]
+						},
+						"description": "Get comprehensive dashboard data for system monitoring"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Incidents",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/monitoring/incidents",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"monitoring",
+								"incidents"
+							]
+						},
+						"description": "Get list of system incidents"
+					},
+					"response": []
+				},
+				{
+					"name": "Create Incident",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{accessToken}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"title\": \"API endpoint returning 500 errors\",\n  \"description\": \"The /api/tasks endpoint is returning 500 errors\",\n  \"severity\": \"high\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/monitoring/incidents",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"monitoring",
+								"incidents"
+							]
+						},
+						"description": "Create a new incident"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Observability",
+			"description": "Distributed tracing and observability",
+			"item": [
+				{
+					"name": "Get Observability Metrics",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/observability/metrics",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"observability",
+								"metrics"
+							]
+						},
+						"description": "Get distributed tracing and observability metrics"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Active Traces",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/observability/traces/active",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"observability",
+								"traces",
+								"active"
+							]
+						},
+						"description": "Get list of currently active traces"
+					},
+					"response": []
+				},
+				{
+					"name": "Stream Real-time Events",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/observability/events/stream",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"observability",
+								"events",
+								"stream"
+							]
+						},
+						"description": "Stream real-time observability events via Server-Sent Events"
+					},
+					"response": []
+				}
+			]
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					"// Set up authentication variables",
+					"if (!pm.environment.get('accessToken')) {",
+					"    pm.environment.set('accessToken', pm.variables.get('accessToken') || '');",
+					"}",
+					"",
+					"// Log request for debugging",
+					"console.log('Request:', pm.request.method, pm.request.url.toString());",
+					"",
+					"// Add request ID header",
+					"const requestId = 'req_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);",
+					"pm.request.headers.add({",
+					"    key: 'X-Request-ID',",
+					"    value: requestId",
+					"});"
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					"// Test response status codes",
+					"pm.test('Status code is 2xx', function () {",
+					"    pm.response.to.be.success;",
+					"});",
+					"",
+					"// Test response time",
+					"pm.test('Response time is less than 2000ms', function () {",
+					"    pm.expect(pm.response.responseTime).to.be.below(2000);",
+					"});",
+					"",
+					"// Test content type",
+					"pm.test('Content-Type is application/json', function () {",
+					"    pm.response.to.be.json;",
+					"    pm.response.to.have.header('Content-Type', 'application/json');",
+					"});",
+					"",
+					"// Test rate limiting headers",
+					"if (pm.response.to.have.header('X-RateLimit-Limit')) {",
+					"    pm.test('Rate limit headers present', function () {",
+					"        pm.response.to.have.header('X-RateLimit-Limit');",
+					"        pm.response.to.have.header('X-RateLimit-Remaining');",
+					"        pm.response.to.have.header('X-RateLimit-Reset');",
+					"    });",
+					"}",
+					"",
+					"// Log response for debugging",
+					"console.log('Response status:', pm.response.status);",
+					"console.log('Response time:', pm.response.responseTime + 'ms');",
+					"",
+					"// Extract and store variables from response",
+					"if (pm.response.code === 200 || pm.response.code === 201) {",
+					"    const jsonData = pm.response.json();",
+					"    ",
+					"    // Store user data from auth responses",
+					"    if (jsonData.token && !pm.environment.get('accessToken')) {",
+					"        pm.environment.set('accessToken', jsonData.token);",
+					"        pm.environment.set('refreshToken', jsonData.refresh_token);",
+					"        pm.environment.set('userId', jsonData.user.id);",
+					"        pm.environment.set('userEmail', jsonData.user.email);",
+					"    }",
+					"    ",
+					"    // Store task data",
+					"    if (jsonData.task_id) {",
+					"        pm.environment.set('taskId', jsonData.task_id);",
+					"    }",
+					"}"
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "https://crazy-gary-api.railway.app",
+			"type": "string"
+		},
+		{
+			"key": "accessToken",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "refreshToken",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "userEmail",
+			"value": "test@example.com",
+			"type": "string"
+		},
+		{
+			"key": "userPassword",
+			"value": "TestPassword123!",
+			"type": "string"
+		},
+		{
+			"key": "currentPassword",
+			"value": "TestPassword123!",
+			"type": "string"
+		},
+		{
+			"key": "newPassword",
+			"value": "NewPassword456!",
+			"type": "string"
+		},
+		{
+			"key": "userId",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "taskId",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "modelType",
+			"value": "120b",
+			"type": "string"
+		},
+		{
+			"key": "clientName",
+			"value": "github",
+			"type": "string"
+		},
+		{
+			"key": "searchQuery",
+			"value": "code",
+			"type": "string"
+		},
+		{
+			"key": "orchestrationId",
+			"value": "orch_123",
+			"type": "string"
+		}
+	],
+	"auth": {
+		"type": "bearer",
+		"bearer": [
+			{
+				"key": "token",
+				"value": "{{accessToken}}",
+				"type": "string"
+			}
+		]
+	},
+	"protocolProfileBehavior": {
+		"disableBodyPruning": false,
+		"followRedirects": false,
+		"strictSSL": true
+	}
+}

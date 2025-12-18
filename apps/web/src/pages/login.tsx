@@ -9,11 +9,12 @@ import { Label } from '@/components/ui/label'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { useAuth } from '@/contexts/auth-context'
 import { useToast } from '@/hooks/use-toast'
+import { useZodForm } from '@/hooks/use-zod-form'
+import { loginSchema, type LoginFormData } from '@/schemas/auth'
 import { Loader2, Bot, Eye, EyeOff, Sparkles, ArrowRight, Zap } from 'lucide-react'
 
 export function Login() {
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
+  const form = useZodForm(loginSchema)
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -27,13 +28,12 @@ export function Login() {
     setMounted(true)
   }, [])
 
-  const handleSubmit = async (e) => {
-    e.preventDefault()
+  const onSubmit = async (data: LoginFormData) => {
     setError('')
     setLoading(true)
 
     try {
-      const result = await login(email, password)
+      const result = await login(data.email, data.password)
       
       if (result.success) {
         toast({
@@ -43,7 +43,7 @@ export function Login() {
         })
         navigate('/')
       } else {
-        setError(result.error)
+        setError(result.error || 'Login failed')
       }
     } catch {
       setError('An unexpected error occurred')
@@ -53,8 +53,9 @@ export function Login() {
   }
 
   const handleDemoLogin = async () => {
-    setEmail('demo@crazy-gary.ai')
-    setPassword('demo123')
+    // Set demo values and trigger validation
+    form.setValue('email', 'demo@crazy-gary.ai')
+    form.setValue('password', 'demo123')
     setLoading(true)
     
     // Simulate demo login
@@ -132,7 +133,7 @@ export function Login() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-              <form onSubmit={handleSubmit} className="space-y-5">
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
                 {error && (
                   <Alert variant="destructive" className="animate-in slide-up">
                     <AlertDescription className="font-medium">{error}</AlertDescription>
@@ -140,31 +141,48 @@ export function Login() {
                 )}
 
                 <div className="space-y-3">
-                  <Label htmlFor="email" className="text-sm font-medium">Email Address</Label>
+                  <Label htmlFor="email" className="text-sm font-medium">
+                    Email Address
+                    <span className="sr-only"> (required)</span>
+                  </Label>
                   <Input
+                    {...form.register('email')}
                     id="email"
                     type="email"
                     placeholder="you@company.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
                     disabled={loading}
-                    className="h-12 text-base transition-all duration-200 focus:ring-2 focus:ring-primary/20 focus:border-primary"
+                    aria-required="true"
+                    aria-invalid={!!form.formState.errors.email}
+                    aria-describedby={form.formState.errors.email ? "email-error" : undefined}
+                    className={`h-12 text-base transition-all duration-200 focus:ring-2 focus:ring-primary/20 focus:border-primary ${
+                      form.formState.errors.email ? 'border-red-500 focus:ring-red-500/20' : ''
+                    }`}
                   />
+                  {form.formState.errors.email && (
+                    <p className="text-sm text-red-500 mt-1" id="email-error" role="alert">
+                      {form.formState.errors.email.message}
+                    </p>
+                  )}
                 </div>
 
                 <div className="space-y-3">
-                  <Label htmlFor="password" className="text-sm font-medium">Password</Label>
+                  <Label htmlFor="password" className="text-sm font-medium">
+                    Password
+                    <span className="sr-only"> (required)</span>
+                  </Label>
                   <div className="relative">
                     <Input
+                      {...form.register('password')}
                       id="password"
                       type={showPassword ? 'text' : 'password'}
                       placeholder="Enter your password"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      required
                       disabled={loading}
-                      className="h-12 text-base pr-12 transition-all duration-200 focus:ring-2 focus:ring-primary/20 focus:border-primary"
+                      aria-required="true"
+                      aria-invalid={!!form.formState.errors.password}
+                      aria-describedby={form.formState.errors.password ? "password-error" : "password-help"}
+                      className={`h-12 text-base pr-12 transition-all duration-200 focus:ring-2 focus:ring-primary/20 focus:border-primary ${
+                        form.formState.errors.password ? 'border-red-500 focus:ring-red-500/20' : ''
+                      }`}
                     />
                     <Button
                       type="button"
@@ -173,6 +191,8 @@ export function Login() {
                       className="absolute right-0 top-0 h-12 px-4 hover:bg-transparent text-muted-foreground hover:text-foreground transition-colors"
                       onClick={() => setShowPassword(!showPassword)}
                       disabled={loading}
+                      aria-label={showPassword ? "Hide password" : "Show password"}
+                      aria-describedby="password-help"
                     >
                       {showPassword ? (
                         <EyeOff className="h-5 w-5" />
@@ -181,12 +201,20 @@ export function Login() {
                       )}
                     </Button>
                   </div>
+                  <p id="password-help" className="text-sm text-muted-foreground">
+                    Use at least 8 characters with a mix of letters and numbers
+                  </p>
+                  {form.formState.errors.password && (
+                    <p className="text-sm text-red-500 mt-1">
+                      {form.formState.errors.password.message}
+                    </p>
+                  )}
                 </div>
 
                 <Button 
                   type="submit" 
                   className="w-full h-12 text-base font-medium bg-gradient-primary hover:shadow-lg transition-all duration-200 group" 
-                  disabled={loading || !email || !password}
+                  disabled={loading || !form.formState.isValid}
                 >
                   {loading ? (
                     <>

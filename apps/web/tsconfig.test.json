@@ -1,0 +1,73 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    /* Testing-specific overrides */
+    "noEmit": false,
+    "jsx": "react-jsx",
+    
+    /* Test globals and type definitions */
+    "types": [
+      "jest",
+      "node",
+      "@testing-library/jest-dom",
+      "@testing-library/react"
+    ],
+    
+    /* Test-specific compiler settings */
+    "allowJs": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    
+    /* Relaxed settings for test files */
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
+    "noFallthroughCasesInSwitch": false,
+    
+    /* Test file specific paths */
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"],
+      "@/components/*": ["./src/components/*"],
+      "@/lib/*": ["./src/lib/*"],
+      "@/pages/*": ["./src/pages/*"],
+      "@/hooks/*": ["./src/hooks/*"],
+      "@/types/*": ["./src/types/*"],
+      "@/contexts/*": ["./src/contexts/*"],
+      "@/features/*": ["./src/features/*"],
+      "@/store/*": ["./src/store/*"],
+      "@/styles/*": ["./src/styles/*"],
+      "@/assets/*": ["./src/assets/*"],
+      "@/utils/*": ["./src/utils/*"],
+      "@/constants/*": ["./src/constants/*"],
+      "@/services/*": ["./src/services/*"],
+      "@/layouts/*": ["./src/layouts/*"],
+      "@/api/*": ["./src/api/*"],
+      "@/config/*": ["./src/config/*"],
+      
+      /* Test-specific aliases */
+      "@test/*": ["./tests/*"],
+      "@mocks/*": ["./tests/mocks/*"],
+      "@fixtures/*": ["./tests/fixtures/*"],
+      "@utils/*": ["./tests/utils/*"]
+    }
+  },
+  "include": [
+    "src/**/*",
+    "tests/**/*",
+    "tests/**/*.test.ts",
+    "tests/**/*.test.tsx",
+    "tests/**/*.spec.ts",
+    "tests/**/*.spec.tsx",
+    "jest.setup.ts",
+    "jest.setup.tsx",
+    "src/**/*.d.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "build",
+    ".next",
+    ".turbo",
+    "coverage"
+  ]
+}

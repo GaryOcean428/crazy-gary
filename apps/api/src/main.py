@@ -26,6 +26,7 @@ from src.routes.monitoring import monitoring_bp
 from src.routes.heavy import heavy_bp
 from src.routes.coder import coder_bp
 from src.routes.observability import observability_bp, setup_websocket_handlers
+from src.routes.comprehensive_monitoring import comprehensive_monitoring_bp
 from src.middleware.request_logging import init_request_logging
 from src.middleware.security import setup_security
 from src.utils.monitoring import setup_monitoring, setup_railway_monitoring
@@ -86,6 +87,7 @@ app.register_blueprint(monitoring_bp, url_prefix='/api/monitoring')
 app.register_blueprint(heavy_bp, url_prefix='/api/heavy')
 app.register_blueprint(coder_bp, url_prefix='/api/coder')
 app.register_blueprint(observability_bp, url_prefix='/api/observability')
+app.register_blueprint(comprehensive_monitoring_bp, url_prefix='/api/monitoring')
 
 # Database configuration
 database_url = os.getenv('DATABASE_URL')
@@ -160,6 +162,38 @@ def serve_assets(filename):
             return send_from_directory(assets_path, filename)
     return "Asset not found", 404
 
+# Serve API documentation website
+@app.route('/docs/website')
+def serve_api_docs_website():
+    """Serve the comprehensive API documentation website"""
+    static_folder_path = app.static_folder
+    if static_folder_path:
+        docs_path = os.path.join(static_folder_path, 'api-docs', 'index.html')
+        if os.path.exists(docs_path):
+            return send_from_directory(os.path.join(static_folder_path, 'api-docs'), 'index.html')
+    return "Documentation website not found", 404
+
+# Serve documentation assets (CSS, JS)
+@app.route('/docs/website/<path:filename>')
+def serve_docs_assets(filename):
+    """Serve documentation website assets"""
+    static_folder_path = app.static_folder
+    if static_folder_path:
+        docs_path = os.path.join(static_folder_path, 'api-docs', filename)
+        if os.path.exists(docs_path):
+            return send_from_directory(os.path.join(static_folder_path, 'api-docs'), filename)
+    return "Documentation asset not found", 404
+
+# Serve API documentation index
+@app.route('/docs/api/')
+@app.route('/docs/api/index.html')
+def serve_api_docs_index():
+    """Serve the API documentation index page"""
+    docs_index_path = os.path.join(os.path.dirname(__file__), '..', '..', '..', 'docs', 'api', 'index.html')
+    if os.path.exists(docs_index_path):
+        return send_from_directory(os.path.dirname(docs_index_path), 'index.html')
+    return "Documentation index not found", 404
+
 # Serve favicon
 @app.route('/favicon.ico')
 def serve_favicon():
@@ -211,8 +245,32 @@ setup_monitoring(app)
 # Setup Railway-specific monitoring
 railway_config = setup_railway_monitoring()
 
+# Setup comprehensive monitoring and alerting system
+try:
+    from src.utils.monitoring_setup import initialize_monitoring_system
+    initialize_monitoring_system(app)
+    print("✅ Comprehensive monitoring system initialized")
+except Exception as e:
+    print(f"⚠️ Failed to initialize monitoring system: {e}")
+
+# Setup API documentation system
+try:
+    from src.utils.swagger_setup import init_swagger_documentation
+    init_swagger_documentation(app)
+    print("✅ API documentation system initialized")
+except Exception as e:
+    print(f"⚠️ Failed to initialize API documentation system: {e}")
+
 # Setup WebSocket handlers for observability
 setup_websocket_handlers(socketio)
+
+# Setup monitoring WebSocket handlers
+try:
+    from src.routes.comprehensive_monitoring import setup_monitoring_websocket_handlers
+    setup_monitoring_websocket_handlers(socketio)
+    print("✅ Monitoring WebSocket handlers initialized")
+except Exception as e:
+    print(f"⚠️ Failed to initialize monitoring WebSocket handlers: {e}")
 
 if __name__ == '__main__':
     # Railway sets PORT environment variable, default to 8080 for Railway compatibility
@@ -234,6 +292,9 @@ if __name__ == '__main__':
         'DATABASE_URL': '✅ Set' if os.getenv('DATABASE_URL') else '❌ Missing (using SQLite)',
         'JWT_SECRET': '✅ Set' if os.getenv('JWT_SECRET') else '⚠️ Using default',
         'PORT': f"✅ {port}",
+        'SENTRY_DSN': '✅ Set' if os.getenv('SENTRY_DSN') else '⚠️ Not configured',
+        'SLACK_WEBHOOK': '✅ Set' if os.getenv('SLACK_WEBHOOK_URL') else '⚠️ Not configured',
+        'ALERT_EMAIL': '✅ Set' if os.getenv('ALERT_EMAIL_SMTP_HOST') else '⚠️ Not configured',
     }
     print("📋 Environment Variables:")
     for key, status in env_status.items():

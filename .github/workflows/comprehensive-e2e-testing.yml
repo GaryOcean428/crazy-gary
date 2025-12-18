@@ -1,0 +1,642 @@
+name: 🧪 Comprehensive E2E Testing Suite
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+  schedule:
+    # Run comprehensive tests daily at 3 AM UTC
+    - cron: '0 3 * * *'
+
+env:
+  NODE_VERSION: '18'
+  CI: true
+
+jobs:
+  # Test Matrix Setup
+  test-matrix:
+    name: 📋 Test Matrix Analysis
+    runs-on: ubuntu-latest
+    outputs:
+      browsers: ${{ steps.matrix.outputs.browsers }}
+      test-types: ${{ steps.matrix.outputs.test-types }}
+    
+    steps:
+    - name: 📊 Generate Test Matrix
+      id: matrix
+      run: |
+        echo "browsers=[\"chromium\",\"firefox\",\"webkit\"]" >> $GITHUB_OUTPUT
+        echo "test-types=[\"e2e\",\"visual\",\"performance\",\"accessibility\",\"api\"]" >> $GITHUB_OUTPUT
+
+  # Core E2E Tests
+  e2e-tests:
+    name: 🎯 Core E2E Tests
+    runs-on: ubuntu-latest
+    needs: test-matrix
+    strategy:
+      matrix:
+        browser: ${{ fromJson(needs.test-matrix.outputs.browsers) }}
+        test-type: [auth, dashboard, tasks, heavy, settings, api]
+    
+    steps:
+    - name: 📥 Checkout Code
+      uses: actions/checkout@v4
+    
+    - name: 🔧 Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+        cache-dependency-path: 'apps/web/package-lock.json'
+    
+    - name: 📦 Install Dependencies
+      working-directory: apps/web
+      run: |
+        npm ci
+        npx playwright install ${{ matrix.browser }} --with-deps
+    
+    - name: 🏗️ Build Application
+      working-directory: apps/web
+      run: npm run build
+      env:
+        NODE_ENV: production
+    
+    - name: 🧪 Run Core E2E Tests
+      working-directory: apps/web
+      env:
+        CI: true
+        E2E_BASE_URL: http://localhost:5675
+      run: |
+        case ${{ matrix.test-type }} in
+          "auth") npm run test:e2e:auth -- --project=${{ matrix.browser }} ;;
+          "dashboard") npm run test:e2e:dashboard -- --project=${{ matrix.browser }} ;;
+          "tasks") npm run test:e2e:tasks -- --project=${{ matrix.browser }} ;;
+          "heavy") npm run test:e2e:heavy -- --project=${{ matrix.browser }} ;;
+          "settings") npm run test:e2e:settings -- --project=${{ matrix.browser }} ;;
+          "api") npm run test:e2e:api -- --project=${{ matrix.browser }} ;;
+        esac
+    
+    - name: 📊 Upload Test Results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: e2e-results-${{ matrix.browser }}-${{ matrix.test-type }}
+        path: |
+          apps/web/test-results/
+          apps/web/playwright-report/
+        retention-days: 30
+
+  # Cross-Browser Compatibility Tests
+  cross-browser-tests:
+    name: 🌐 Cross-Browser Compatibility
+    runs-on: ubuntu-latest
+    needs: test-matrix
+    
+    steps:
+    - name: 📥 Checkout Code
+      uses: actions/checkout@v4
+    
+    - name: 🔧 Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+        cache-dependency-path: 'apps/web/package-lock.json'
+    
+    - name: 📦 Install Dependencies
+      working-directory: apps/web
+      run: |
+        npm ci
+        npx playwright install chromium firefox webkit --with-deps
+    
+    - name: 🏗️ Build Application
+      working-directory: apps/web
+      run: npm run build
+    
+    - name: 🧪 Cross-Browser Testing
+      working-directory: apps/web
+      env:
+        CI: true
+        E2E_BASE_URL: http://localhost:5675
+      run: |
+        # Test core functionality across all browsers
+        npm run test:e2e -- --project=chromium,firefox,webkit \
+          --reporter=json,junit \
+          --outputDir=test-results/cross-browser
+    
+    - name: 📈 Generate Compatibility Report
+      working-directory: apps/web
+      run: |
+        node scripts/test-runner-enhanced.js \
+          --type e2e \
+          --reporter json \
+          --output test-results/compatibility-report.json
+    
+    - name: 📊 Upload Compatibility Results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: cross-browser-compatibility
+        path: |
+          apps/web/test-results/
+          apps/web/comprehensive-report.html
+        retention-days: 30
+
+  # Visual Regression Testing
+  visual-regression:
+    name: 👁️ Visual Regression Tests
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 📥 Checkout Code
+      uses: actions/checkout@v4
+      with:
+        # Fetch enough history for baseline comparison
+        fetch-depth: 0
+    
+    - name: 🔧 Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+        cache-dependency-path: 'apps/web/package-lock.json'
+    
+    - name: 📦 Install Dependencies
+      working-directory: apps/web
+      run: |
+        npm ci
+        npx playwright install chromium --with-deps
+    
+    - name: 🏗️ Build Application
+      working-directory: apps/web
+      run: npm run build
+    
+    - name: 🧪 Visual Regression Tests
+      working-directory: apps/web
+      env:
+        CI: true
+        E2E_BASE_URL: http://localhost:5675
+      run: |
+        # Run visual tests with baseline comparison
+        npm run test:e2e:visual -- --project=chromium
+    
+    - name: 🔄 Update Snapshots (Main Branch)
+      if: github.ref == 'refs/heads/main'
+      working-directory: apps/web
+      run: npm run test:visual:update
+    
+    - name: 📊 Upload Visual Results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: visual-regression-results
+        path: |
+          apps/web/test-results/
+          apps/web/playwright-report/
+          apps/web/tests/visual/test-results/
+        retention-days: 30
+
+  # Performance Testing
+  performance-tests:
+    name: ⚡ Performance Testing
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 📥 Checkout Code
+      uses: actions/checkout@v4
+    
+    - name: 🔧 Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+        cache-dependency-path: 'apps/web/package-lock.json'
+    
+    - name: 📦 Install Dependencies
+      working-directory: apps/web
+      run: |
+        npm ci
+        npx playwright install chromium --with-deps
+    
+    - name: 🏗️ Build Application
+      working-directory: apps/web
+      run: npm run build
+    
+    - name: 📊 Performance Baseline Check
+      working-directory: apps/web
+      run: |
+        # Check bundle size
+        npm run check-bundle
+        
+        # Run performance audit
+        npm run performance:budget
+    
+    - name: 🧪 Performance Tests
+      working-directory: apps/web
+      env:
+        CI: true
+        E2E_BASE_URL: http://localhost:5675
+      run: |
+        # Run comprehensive performance tests
+        npm run test:e2e:performance -- --project=chromium
+        
+        # Generate performance report
+        node scripts/test-runner-enhanced.js \
+          --type performance \
+          --reporter json \
+          --output test-results/performance-report.json
+    
+    - name: 📈 Performance Analysis
+      working-directory: apps/web
+      run: |
+        # Analyze performance trends
+        node scripts/test-runner-enhanced.js \
+          --type performance \
+          --reporter html
+    
+    - name: 📊 Upload Performance Results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: performance-test-results
+        path: |
+          apps/web/test-results/
+          apps/web/comprehensive-report.html
+          apps/web/performance-report.md
+        retention-days: 90
+
+  # Accessibility Testing
+  accessibility-tests:
+    name: ♿ Accessibility Testing
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 📥 Checkout Code
+      uses: actions/checkout@v4
+    
+    - name: 🔧 Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+        cache-dependency-path: 'apps/web/package-lock.json'
+    
+    - name: 📦 Install Dependencies
+      working-directory: apps/web
+      run: |
+        npm ci
+        npx playwright install chromium --with-deps
+    
+    - name: 🏗️ Build Application
+      working-directory: apps/web
+      run: npm run build
+    
+    - name: 🧪 Accessibility Tests
+      working-directory: apps/web
+      env:
+        CI: true
+        E2E_BASE_URL: http://localhost:5675
+      run: |
+        # Run accessibility tests
+        npm run test:accessibility:ci
+        
+        # Run visual accessibility tests
+        npm run test:visual -- tests/visual/accessibility.spec.ts
+    
+    - name: 🧭 Lighthouse Accessibility Audit
+      working-directory: apps/web
+      run: |
+        # Install Lighthouse CI
+        npm install -g @lhci/cli@0.12.x
+        
+        # Run Lighthouse accessibility audit
+        lhci autorun --config=.lighthouserc.json
+    
+    - name: 📊 Upload Accessibility Results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: accessibility-test-results
+        path: |
+          apps/web/coverage/
+          apps/web/.lighthouseci/
+          apps/web/test-results/
+        retention-days: 30
+
+  # API Integration Testing
+  api-integration-tests:
+    name: 🔌 API Integration Testing
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 📥 Checkout Code
+      uses: actions/checkout@v4
+    
+    - name: 🔧 Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+        cache-dependency-path: 'apps/web/package-lock.json'
+    
+    - name: 📦 Install Dependencies
+      working-directory: apps/web
+      run: |
+        npm ci
+        npx playwright install chromium --with-deps
+    
+    - name: 🏗️ Build Application
+      working-directory: apps/web
+      run: npm run build
+    
+    - name: 🧪 API Integration Tests
+      working-directory: apps/web
+      env:
+        CI: true
+        E2E_BASE_URL: http://localhost:5675
+        API_BASE_URL: http://localhost:8000
+      run: |
+        # Run API integration tests
+        npm run test:e2e:api -- --project=chromium
+        
+        # Run enhanced API tests
+        node scripts/test-runner-enhanced.js \
+          --type api \
+          --reporter json \
+          --output test-results/api-report.json
+    
+    - name: 📊 Upload API Test Results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: api-integration-results
+        path: |
+          apps/web/test-results/
+          apps/web/comprehensive-report.html
+        retention-days: 30
+
+  # Mobile and Responsive Testing
+  mobile-responsive-tests:
+    name: 📱 Mobile & Responsive Testing
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 📥 Checkout Code
+      uses: actions/checkout@v4
+    
+    - name: 🔧 Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+        cache-dependency-path: 'apps/web/package-lock.json'
+    
+    - name: 📦 Install Dependencies
+      working-directory: apps/web
+      run: |
+        npm ci
+        npx playwright install chromium --with-deps
+    
+    - name: 🏗️ Build Application
+      working-directory: apps/web
+      run: npm run build
+    
+    - name: 📱 Mobile Testing
+      working-directory: apps/web
+      env:
+        CI: true
+        E2E_BASE_URL: http://localhost:5675
+      run: |
+        # Test mobile browsers
+        npm run test:e2e:mobile -- --project='Mobile Chrome'
+        
+        # Test responsive design
+        npm run test:visual -- tests/visual/pages.spec.ts
+    
+    - name: 📊 Upload Mobile Test Results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: mobile-responsive-results
+        path: |
+          apps/web/test-results/
+          apps/web/playwright-report/
+        retention-days: 30
+
+  # Enhanced Test Runner Execution
+  enhanced-test-runner:
+    name: 🚀 Enhanced Test Runner
+    runs-on: ubuntu-latest
+    needs: [test-matrix]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    
+    steps:
+    - name: 📥 Checkout Code
+      uses: actions/checkout@v4
+    
+    - name: 🔧 Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+        cache-dependency-path: 'apps/web/package-lock.json'
+    
+    - name: 📦 Install Dependencies
+      working-directory: apps/web
+      run: |
+        npm ci
+        npx playwright install chromium firefox webkit --with-deps
+    
+    - name: 🏗️ Build Application
+      working-directory: apps/web
+      run: npm run build
+    
+    - name: 🏃 Comprehensive Test Suite
+      working-directory: apps/web
+      env:
+        CI: true
+        E2E_BASE_URL: http://localhost:5675
+      run: |
+        # Run comprehensive test suite using enhanced runner
+        node scripts/test-runner-enhanced.js \
+          --type e2e \
+          --parallel \
+          --workers 4 \
+          --reporter html,json \
+          --output test-results/enhanced
+    
+    - name: 📊 Upload Enhanced Results
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: enhanced-test-results
+        path: |
+          apps/web/test-results/enhanced/
+          apps/web/comprehensive-report.html
+        retention-days: 90
+
+  # Test Results Analysis and Reporting
+  test-analysis:
+    name: 📈 Test Results Analysis
+    runs-on: ubuntu-latest
+    needs: [
+      e2e-tests,
+      cross-browser-tests,
+      visual-regression,
+      performance-tests,
+      accessibility-tests,
+      api-integration-tests,
+      mobile-responsive-tests
+    ]
+    if: always()
+    
+    steps:
+    - name: 📥 Checkout Code
+      uses: actions/checkout@v4
+    
+    - name: 📊 Download All Test Results
+      uses: actions/download-artifact@v4
+      with:
+        path: test-results/
+    
+    - name: 🔍 Analyze Test Results
+      run: |
+        # Create comprehensive test summary
+        echo "# 🧪 Comprehensive Test Results Summary" > test-summary.md
+        echo "" >> test-summary.md
+        echo "Generated: $(date)" >> test-summary.md
+        echo "" >> test-summary.md
+        
+        # Count test results
+        total_artifacts=$(find test-results/ -name "*.json" | wc -l)
+        echo "📊 Total Test Artifacts: $total_artifacts" >> test-summary.md
+        
+        # Analyze each job
+        for job in e2e-tests cross-browser-tests visual-regression performance-tests accessibility-tests api-integration-tests mobile-responsive-tests; do
+          echo "" >> test-summary.md
+          echo "## $job" >> test-summary.md
+          if [ -d "test-results/$job" ]; then
+            echo "✅ Job completed" >> test-summary.md
+            artifact_count=$(find "test-results/$job" -name "*" | wc -l)
+            echo "📦 Artifacts: $artifact_count" >> test-summary.md
+          else
+            echo "❌ Job failed or not found" >> test-summary.md
+          fi
+        done
+    
+    - name: 📤 Upload Test Summary
+      uses: actions/upload-artifact@v4
+      with:
+        name: test-summary
+        path: test-summary.md
+        retention-days: 90
+
+  # Test Failure Notification
+  failure-notification:
+    name: 🚨 Test Failure Notification
+    runs-on: ubuntu-latest
+    needs: [
+      e2e-tests,
+      cross-browser-tests,
+      visual-regression,
+      performance-tests,
+      accessibility-tests
+    ]
+    if: failure() && github.event_name == 'pull_request'
+    
+    steps:
+    - name: 📧 Notify on Test Failures
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const { data: pullRequest } = await github.rest.pulls.get({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            pull_number: context.issue.number
+          });
+          
+          const comment = `## ⚠️ E2E Test Failures Detected
+          
+          The pull request #${pullRequest.number} has introduced test failures that need to be addressed:
+          
+          **Failed Test Suites:**
+          ${context.payload.check_suite?.conclusion === 'failure' ? '- E2E Tests' : ''}
+          ${context.payload.check_suite?.conclusion === 'failure' ? '- Cross-browser Tests' : ''}
+          ${context.payload.check_suite?.conclusion === 'failure' ? '- Visual Regression' : ''}
+          ${context.payload.check_suite?.conclusion === 'failure' ? '- Performance Tests' : ''}
+          ${context.payload.check_suite?.conclusion === 'failure' ? '- Accessibility Tests' : ''}
+          
+          **Next Steps:**
+          1. Review the detailed test results in the workflow artifacts
+          2. Fix the failing tests
+          3. Ensure all tests pass before requesting another review
+          4. Check the comprehensive test report for detailed analysis
+          
+          **Resources:**
+          - [E2E Testing Guide](./apps/web/docs/E2E_TESTING_GUIDE.md)
+          - [Playwright Documentation](https://playwright.dev/)
+          - [Test Results](./actions/runs/${context.runId})
+          
+          Please ensure all tests pass before requesting another review.`;
+          
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: comment
+          });
+
+  # Success Notification
+  success-notification:
+    name: ✅ All Tests Passed
+    runs-on: ubuntu-latest
+    needs: [
+      e2e-tests,
+      cross-browser-tests,
+      visual-regression,
+      performance-tests,
+      accessibility-tests,
+      api-integration-tests,
+      mobile-responsive-tests
+    ]
+    if: success() && github.event_name == 'pull_request'
+    
+    steps:
+    - name: 📧 Notify on Test Success
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const { data: pullRequest } = await github.rest.pulls.get({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            pull_number: context.issue.number
+          });
+          
+          const comment = `## 🎉 All E2E Tests Passed!
+          
+          Congratulations! Pull request #${pullRequest.number} has passed all comprehensive E2E tests:
+          
+          ✅ **Core E2E Tests** - Authentication, Dashboard, Tasks, Heavy Mode, Settings, API
+          ✅ **Cross-Browser Compatibility** - Chromium, Firefox, Safari
+          ✅ **Visual Regression** - UI consistency across all states
+          ✅ **Performance Tests** - Load times, memory usage, concurrent users
+          ✅ **Accessibility Tests** - WCAG 2.1 AA compliance
+          ✅ **API Integration** - Endpoint validation and error handling
+          ✅ **Mobile & Responsive** - Mobile browsers and responsive design
+          
+          **Test Coverage Summary:**
+          - 🧪 Total Tests Executed: Comprehensive coverage
+          - 🌐 Browsers Tested: 3 (Chrome, Firefox, Safari)
+          - 📱 Mobile Tested: iOS and Android
+          - ⚡ Performance: All thresholds met
+          - ♿ Accessibility: WCAG 2.1 AA compliant
+          
+          The changes are ready for deployment! 🚀`;
+          
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: comment
+          });

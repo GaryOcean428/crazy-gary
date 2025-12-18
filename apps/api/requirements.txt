@@ -21,6 +21,10 @@ bcrypt==4.3.0
 PyJWT==2.10.1
 python-dotenv==1.0.1
 cryptography==44.0.1
+bleach==6.2.0
+marshmallow==3.23.0
+validators==0.34.0
+email-validator==2.2.0
 
 # HTTP and API
 requests==2.32.4
@@ -62,3 +66,7 @@ safety==3.2.0
 # Performance
 orjson==3.10.0
 uvloop==0.20.0
+
+# API Documentation
+flask-swagger-ui==4.15.2
+pyyaml==6.0.2

@@ -1,0 +1,655 @@
+name: Environment Management
+
+permissions:
+  contents: read
+  deployments: write
+  pull-requests: write
+
+on:
+  push:
+    branches: [main, develop, 'release/*', 'hotfix/*']
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Target environment'
+        required: true
+        type: choice
+        options:
+          - development
+          - staging
+          - production
+          - preview
+      action:
+        description: 'Action to perform'
+        required: true
+        type: choice
+        options:
+          - deploy
+          - rollback
+          - scale
+          - restart
+          - backup
+          - restore
+      version:
+        description: 'Version to deploy (for rollback/restore)'
+        required: false
+        type: string
+      force:
+        description: 'Force operation without confirmation'
+        required: false
+        default: false
+        type: boolean
+
+env:
+  RAILWAY_ENVIRONMENTS: |
+    development:dev
+    staging:staging  
+    production:production
+    preview:preview
+
+jobs:
+  # =============================================================================
+  # ENVIRONMENT VALIDATION
+  # =============================================================================
+  validate-environment:
+    name: Environment Validation
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    
+    outputs:
+      environment: ${{ steps.validate.outputs.environment }}
+      valid: ${{ steps.validate.outputs.valid }}
+      environment-config: ${{ steps.config.outputs.json }}
+      
+    steps:
+      - name: Validate environment parameters
+        id: validate
+        run: |
+          # Validate environment input
+          env_input="${{ github.event.inputs.environment || github.ref_name }}"
+          
+          # Determine environment from branch/input
+          case $env_input in
+            main)
+              environment="production"
+              ;;
+            develop)
+              environment="staging"
+              ;;
+            release/*)
+              environment="staging"
+              ;;
+            hotfix/*)
+              environment="production"
+              ;;
+            development|staging|production|preview)
+              environment="$env_input"
+              ;;
+            *)
+              echo "❌ Invalid environment: $env_input"
+              echo "valid=false" >> $GITHUB_OUTPUT
+              exit 1
+              ;;
+          esac
+          
+          echo "environment=$environment" >> $GITHUB_OUTPUT
+          echo "valid=true" >> $GITHUB_OUTPUT
+
+      - name: Generate environment configuration
+        id: config
+        run: |
+          env="${{ steps.validate.outputs.environment }}"
+          
+          # Generate environment-specific configuration
+          case $env in
+            development)
+              cat << EOF > env-config.json
+              {
+                "name": "development",
+                "display_name": "Development",
+                "type": "development",
+                "url": "https://crazy-gary-dev.up.railway.app",
+                "branch": "develop",
+                "auto_deploy": true,
+                "requires_approval": false,
+                "health_check_path": "/health",
+                "environment_variables": {
+                  "NODE_ENV": "development",
+                  "LOG_LEVEL": "debug",
+                  "CACHE_TTL": "300",
+                  "DATABASE_POOL_SIZE": "5"
+                },
+                "scaling": {
+                  "min_instances": 1,
+                  "max_instances": 2,
+                  "cpu": "0.5",
+                  "memory": "512Mi"
+                }
+              }
+              EOF
+              ;;
+            staging)
+              cat << EOF > env-config.json
+              {
+                "name": "staging",
+                "display_name": "Staging",
+                "type": "staging",
+                "url": "https://crazy-gary-staging.up.railway.app",
+                "branch": "develop",
+                "auto_deploy": true,
+                "requires_approval": true,
+                "health_check_path": "/health",
+                "environment_variables": {
+                  "NODE_ENV": "staging",
+                  "LOG_LEVEL": "info",
+                  "CACHE_TTL": "600",
+                  "DATABASE_POOL_SIZE": "10"
+                },
+                "scaling": {
+                  "min_instances": 1,
+                  "max_instances": 3,
+                  "cpu": "1",
+                  "memory": "1Gi"
+                }
+              }
+              EOF
+              ;;
+            production)
+              cat << EOF > env-config.json
+              {
+                "name": "production",
+                "display_name": "Production",
+                "type": "production",
+                "url": "https://crazy-gary.up.railway.app",
+                "branch": "main",
+                "auto_deploy": false,
+                "requires_approval": true,
+                "health_check_path": "/health",
+                "environment_variables": {
+                  "NODE_ENV": "production",
+                  "LOG_LEVEL": "warn",
+                  "CACHE_TTL": "3600",
+                  "DATABASE_POOL_SIZE": "20"
+                },
+                "scaling": {
+                  "min_instances": 2,
+                  "max_instances": 10,
+                  "cpu": "2",
+                  "memory": "2Gi"
+                }
+              }
+              EOF
+              ;;
+            preview)
+              cat << EOF > env-config.json
+              {
+                "name": "preview",
+                "display_name": "Preview",
+                "type": "preview",
+                "url": "https://crazy-gary-preview-${GITHUB_SHA::8}.up.railway.app",
+                "branch": "${GITHUB_REF_NAME}",
+                "auto_deploy": false,
+                "requires_approval": false,
+                "health_check_path": "/health",
+                "environment_variables": {
+                  "NODE_ENV": "preview",
+                  "LOG_LEVEL": "info",
+                  "CACHE_TTL": "300",
+                  "DATABASE_POOL_SIZE": "5"
+                },
+                "scaling": {
+                  "min_instances": 1,
+                  "max_instances": 1,
+                  "cpu": "0.5",
+                  "memory": "512Mi"
+                }
+              }
+              EOF
+              ;;
+          esac
+          
+          echo "json=$(cat env-config.json)" >> $GITHUB_OUTPUT
+
+  # =============================================================================
+  # DEPLOYMENT TO ENVIRONMENT
+  # =============================================================================
+  deploy-environment:
+    name: Deploy to ${{ needs.validate-environment.outputs.environment }}
+    runs-on: ubuntu-latest
+    needs: validate-environment
+    if: |
+      github.event.inputs.action == 'deploy' ||
+      (github.event_name == 'push' && needs.validate-environment.outputs.valid == 'true')
+    environment:
+      name: ${{ needs.validate-environment.outputs.environment }}
+      url: ${{ steps.deploy.outputs.url }}
+    
+    outputs:
+      deployment-url: ${{ steps.deploy.outputs.url }}
+      deployment-id: ${{ steps.deploy.outputs.id }}
+      deployment-status: ${{ steps.deploy.outputs.status }}
+      
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Railway CLI
+        run: |
+          curl -fsSL https://railway.app/install.sh | sh
+          echo "$HOME/.railway/bin" >> $GITHUB_PATH
+
+      - name: Configure environment
+        id: config
+        run: |
+          # Load environment configuration
+          echo '${{ needs.validate-environment.outputs.environment-config }}' | jq -r '.' > current-env.json
+          
+          # Extract configuration
+          ENV_NAME=$(jq -r '.name' current-env.json)
+          ENV_URL=$(jq -r '.url' current-env.json)
+          ENV_BRANCH=$(jq -r '.branch' current-env.json)
+          REQUIRES_APPROVAL=$(jq -r '.requires_approval' current-env.json)
+          
+          echo "ENV_NAME=$ENV_NAME" >> $GITHUB_ENV
+          echo "ENV_URL=$ENV_URL" >> $GITHUB_ENV
+          echo "ENV_BRANCH=$ENV_BRANCH" >> $GITHUB_ENV
+          echo "REQUIRES_APPROVAL=$REQUIRES_APPROVAL" >> $GITHUB_OUTPUT
+
+      - name: Check deployment permissions
+        id: permissions
+        run: |
+          # Check if deployment requires approval
+          if [ "$REQUIRES_APPROVAL" = "true" ] && [ "${{ github.event.inputs.force }}" != "true" ]; then
+            echo "status=pending_approval" >> $GITHUB_OUTPUT
+            echo "This deployment requires approval from the deployment approvers."
+            echo "Please add a comment with '/approve' to approve this deployment."
+            exit 0
+          else
+            echo "status=approved" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Setup deployment environment
+        run: |
+          # Install dependencies
+          yarn install --immutable
+          
+          # Build application
+          yarn build
+          
+          # Run pre-deployment checks
+          echo "Running pre-deployment checks..."
+          
+          # Health check current deployment
+          if curl -f "$ENV_URL/health" > /dev/null 2>&1; then
+            echo "✅ Current deployment is healthy"
+          else
+            echo "⚠️ Current deployment health check failed"
+          fi
+
+      - name: Deploy to Railway
+        id: deploy
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          RAILWAY_PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID }}
+        run: |
+          # Login to Railway
+          railway login --token $RAILWAY_TOKEN
+          
+          # Set environment variables
+          jq -r '.environment_variables | to_entries[] | "\(.key)=\(.value)"' current-env.json | while read -r var; do
+            railway variables set "$var"
+          done
+          
+          # Deploy application
+          if [ "$ENV_NAME" = "preview" ]; then
+            # Create preview deployment
+            railway deploy --environment preview --service crazy-gary
+          else
+            # Deploy to specific environment
+            railway deploy --environment $ENV_NAME
+          fi
+          
+          # Get deployment ID and URL
+          DEPLOYMENT_ID=$(railway status --json | jq -r '.deployments[0].id')
+          DEPLOYMENT_URL=$(railway status --json | jq -r '.deployments[0].url')
+          
+          echo "id=$DEPLOYMENT_ID" >> $GITHUB_OUTPUT
+          echo "url=https://$DEPLOYMENT_URL" >> $GITHUB_OUTPUT
+          echo "status=deployed" >> $GITHUB_OUTPUT
+
+      - name: Post-deployment validation
+        run: |
+          echo "Waiting for deployment to be ready..."
+          sleep 30
+          
+          # Health check
+          if curl -f "${{ steps.deploy.outputs.url }}/health" > /dev/null 2>&1; then
+            echo "✅ Deployment health check passed"
+          else
+            echo "❌ Deployment health check failed"
+            exit 1
+          fi
+          
+          # API endpoints check
+          endpoints=("/api/health" "/api/status" "/")
+          for endpoint in "${endpoints[@]}"; do
+            if curl -f "${{ steps.deploy.outputs.url }}$endpoint" > /dev/null 2>&1; then
+              echo "✅ Endpoint $endpoint is accessible"
+            else
+              echo "❌ Endpoint $endpoint is not accessible"
+            fi
+          done
+
+      - name: Update deployment record
+        run: |
+          # Create deployment record
+          cat > deployment-record.json << EOF
+          {
+            "id": "${{ steps.deploy.outputs.deployment-id }}",
+            "environment": "${{ needs.validate-environment.outputs.environment }}",
+            "url": "${{ steps.deploy.outputs.deployment-url }}",
+            "commit": "${{ github.sha }}",
+            "branch": "${{ github.ref_name }}",
+            "deployed_at": "$(date -u +"%Y-%m-%dT%H:%M:%SZ")",
+            "deployed_by": "${{ github.actor }}",
+            "status": "${{ steps.deploy.outputs.deployment-status }}"
+          }
+          EOF
+
+      - name: Create deployment summary
+        run: |
+          echo "## 🚀 Deployment Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Environment:** ${{ needs.validate-environment.outputs.environment }}" >> $GITHUB_STEP_SUMMARY
+          echo "**URL:** ${{ steps.deploy.outputs.deployment-url }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Deployment ID:** ${{ steps.deploy.outputs.deployment-id }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Branch:** ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Deployed by:** ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Deployed at:** $(date -u)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 🔗 Quick Links" >> $GITHUB_STEP_SUMMARY
+          echo "- [Application](${{ steps.deploy.outputs.deployment-url }})" >> $GITHUB_STEP_SUMMARY
+          echo "- [Health Check](${{ steps.deploy.outputs.deployment-url }}/health)" >> $GITHUB_STEP_SUMMARY
+          echo "- [Railway Dashboard](https://railway.app/project/${{ secrets.RAILWAY_PROJECT_ID }})" >> $GITHUB_STEP_SUMMARY
+
+      - name: Upload deployment artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: deployment-artifacts-${{ needs.validate-environment.outputs.environment }}
+          path: |
+            current-env.json
+            deployment-record.json
+          retention-days: 90
+
+  # =============================================================================
+  # ENVIRONMENT SCALING
+  # =============================================================================
+  scale-environment:
+    name: Scale ${{ needs.validate-environment.outputs.environment }} Environment
+    runs-on: ubuntu-latest
+    needs: validate-environment
+    if: github.event.inputs.action == 'scale'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Railway CLI
+        run: |
+          curl -fsSL https://railway.app/install.sh | sh
+          echo "$HOME/.railway/bin" >> $GITHUB_PATH
+
+      - name: Scale application
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+        run: |
+          railway login --token $RAILWAY_TOKEN
+          
+          # Parse scaling configuration
+          echo '${{ needs.validate-environment.outputs.environment-config }}' | jq -r '.scaling' > scaling-config.json
+          
+          MIN_INSTANCES=$(jq -r '.min_instances' scaling-config.json)
+          MAX_INSTANCES=$(jq -r '.max_instances' scaling-config.json)
+          CPU=$(jq -r '.cpu' scaling-config.json)
+          MEMORY=$(jq -r '.memory' scaling-config.json)
+          
+          # Apply scaling configuration
+          railway scale --min $MIN_INSTANCES --max $MAX_INSTANCES
+          
+          echo "Scaled ${{ needs.validate-environment.outputs.environment }} environment:"
+          echo "- Min instances: $MIN_INSTANCES"
+          echo "- Max instances: $MAX_INSTANCES"
+          echo "- CPU: $CPU"
+          echo "- Memory: $MEMORY"
+
+  # =============================================================================
+  # ROLLBACK FUNCTIONALITY
+  # =============================================================================
+  rollback-environment:
+    name: Rollback ${{ needs.validate-environment.outputs.environment }}
+    runs-on: ubuntu-latest
+    needs: validate-environment
+    if: github.event.inputs.action == 'rollback'
+    environment:
+      name: ${{ needs.validate-environment.outputs.environment }}
+      url: ${{ steps.rollback.outputs.url }}
+    
+    outputs:
+      rollback-status: ${{ steps.rollback.outputs.status }}
+      previous-version: ${{ steps.rollback.outputs.version }}
+      
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Railway CLI
+        run: |
+          curl -fsSL https://railway.app/install.sh | sh
+          echo "$HOME/.railway/bin" >> $GITHUB_PATH
+
+      - name: Find deployment to rollback to
+        id: find-rollback
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+        run: |
+          railway login --token $RAILWAY_TOKEN
+          
+          # Get deployment history
+          railway status --json > deployments.json
+          
+          # Find target deployment
+          if [ -n "${{ github.event.inputs.version }}" ]; then
+            TARGET_COMMIT="${{ github.event.inputs.version }}"
+          else
+            # Use previous deployment
+            TARGET_COMMIT=$(jq -r '.deployments[1].commit' deployments.json)
+          fi
+          
+          echo "target_commit=$TARGET_COMMIT" >> $GITHUB_OUTPUT
+
+      - name: Perform rollback
+        id: rollback
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+        run: |
+          railway rollback ${{ steps.find-rollback.outputs.target_commit }}
+          
+          # Get rollback status
+          ROLLBACK_STATUS=$(railway status --json | jq -r '.deployments[0].status')
+          ROLLBACK_URL=$(railway status --json | jq -r '.deployments[0].url')
+          
+          echo "status=$ROLLBACK_STATUS" >> $GITHUB_OUTPUT
+          echo "url=https://$ROLLBACK_URL" >> $GITHUB_OUTPUT
+          echo "version=${{ steps.find-rollback.outputs.target_commit }}" >> $GITHUB_OUTPUT
+
+      - name: Validate rollback
+        run: |
+          sleep 30
+          
+          if curl -f "${{ steps.rollback.outputs.url }}/health" > /dev/null 2>&1; then
+            echo "✅ Rollback successful and healthy"
+          else
+            echo "❌ Rollback health check failed"
+            exit 1
+          fi
+
+  # =============================================================================
+  # BACKUP AND RESTORE
+  # =============================================================================
+  backup-restore:
+    name: Backup/Restore ${{ needs.validate-environment.outputs.environment }}
+    runs-on: ubuntu-latest
+    needs: validate-environment
+    if: |
+      github.event.inputs.action == 'backup' ||
+      github.event.inputs.action == 'restore'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Railway CLI
+        run: |
+          curl -fsSL https://railway.app/install.sh | sh
+          echo "$HOME/.railway/bin" >> $GITHUB_PATH
+
+      - name: Backup environment
+        if: github.event.inputs.action == 'backup'
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+        run: |
+          railway login --token $RAILWAY_TOKEN
+          
+          # Create backup
+          BACKUP_NAME="backup-${{ needs.validate-environment.outputs.environment }}-$(date +%Y%m%d-%H%M%S)"
+          
+          # Export environment variables
+          railway variables export --json > "backup-$BACKUP_NAME.json"
+          
+          # Export database (if applicable)
+          if [ "${{ needs.validate-environment.outputs.environment }}" = "production" ]; then
+            echo "Creating database backup..."
+            # Add database backup logic here
+          fi
+          
+          echo "Backup created: $BACKUP_NAME"
+
+      - name: Restore environment
+        if: github.event.inputs.action == 'restore'
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+        run: |
+          railway login --token $RAILWAY_TOKEN
+          
+          # Find backup to restore
+          BACKUP_FILE="${{ github.event.inputs.version }}.json"
+          
+          if [ -f "$BACKUP_FILE" ]; then
+            # Restore environment variables
+            railway variables import "$BACKUP_FILE"
+            
+            # Restart services
+            railway restart
+          else
+            echo "❌ Backup file not found: $BACKUP_FILE"
+            exit 1
+          fi
+
+  # =============================================================================
+  # ENVIRONMENT MONITORING
+  # =============================================================================
+  environment-monitoring:
+    name: Environment Monitoring
+    runs-on: ubuntu-latest
+    needs: [validate-environment, deploy-environment]
+    if: always()
+    
+    steps:
+      - name: Download deployment artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: deployment-artifacts-${{ needs.validate-environment.outputs.environment }}
+
+      - name: Generate monitoring report
+        run: |
+          # Load deployment record
+          DEPLOYMENT_ID=$(jq -r '.id' deployment-record.json)
+          DEPLOYMENT_URL=$(jq -r '.url' deployment-record.json)
+          
+          echo "## 📊 Environment Monitoring Report" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Environment:** ${{ needs.validate-environment.outputs.environment }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Deployment ID:** $DEPLOYMENT_ID" >> $GITHUB_STEP_SUMMARY
+          echo "**URL:** $DEPLOYMENT_URL" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # Health status
+          echo "### 🏥 Health Status" >> $GITHUB_STEP_SUMMARY
+          if curl -f "$DEPLOYMENT_URL/health" > /dev/null 2>&1; then
+            echo "✅ **Healthy** - All systems operational" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ **Unhealthy** - Health check failed" >> $GITHUB_STEP_SUMMARY
+          fi
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # Performance metrics
+          echo "### ⚡ Performance Metrics" >> $GITHUB_STEP_SUMMARY
+          echo "- Response time: $(curl -w '%{time_total}' -o /dev/null -s "$DEPLOYMENT_URL/health")s" >> $GITHUB_STEP_SUMMARY
+          echo "- Status code: $(curl -w '%{http_code}' -o /dev/null -s "$DEPLOYMENT_URL/health")" >> $GITHUB_STEP_SUMMARY
+
+      - name: Create monitoring alerts
+        if: failure()
+        run: |
+          echo "Creating monitoring alert for environment ${{ needs.validate-environment.outputs.environment }}"
+          # Add alert logic here (Slack, email, etc.)
+
+      - name: Upload monitoring data
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: environment-monitoring-${{ needs.validate-environment.outputs.environment }}
+          path: |
+            deployment-record.json
+            current-env.json
+          retention-days: 30
+
+  # =============================================================================
+  # CLEANUP AND NOTIFICATIONS
+  # =============================================================================
+  environment-cleanup:
+    name: Environment Cleanup
+    runs-on: ubuntu-latest
+    needs: [validate-environment, environment-monitoring]
+    if: always()
+    
+    steps:
+      - name: Cleanup preview environments
+        if: needs.validate-environment.outputs.environment == 'preview'
+        run: |
+          echo "Cleaning up preview environment..."
+          # Add cleanup logic for preview environments
+          # This could include deleting old preview deployments
+
+      - name: Notify team
+        run: |
+          ENV="${{ needs.validate-environment.outputs.environment }}"
+          ACTION="${{ github.event.inputs.action || 'deploy' }}"
+          STATUS="${{ needs.environment-monitoring.result }}"
+          
+          echo "Environment $ENV - Action: $ACTION - Status: $STATUS"
+          
+          # Add notification logic here
+          case $STATUS in
+            success)
+              echo "✅ Environment management completed successfully"
+              ;;
+            failure)
+              echo "❌ Environment management failed"
+              ;;
+            *)
+              echo "⚠️ Environment management completed with warnings"
+              ;;
+          esac

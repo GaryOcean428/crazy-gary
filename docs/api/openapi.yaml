@@ -1,0 +1,1549 @@
+openapi: 3.0.3
+info:
+  title: Crazy-Gary API
+  description: |
+    Comprehensive API documentation for the Crazy-Gary application, an AI-powered development assistant with agent orchestration, model management, and comprehensive monitoring capabilities.
+    
+    ## Features
+    - **Authentication & User Management**: JWT-based authentication with user registration, login, and profile management
+    - **Agent Orchestration**: Create, manage, and monitor AI agent tasks with real-time progress tracking
+    - **Model Management**: Dynamic management of HuggingFace inference endpoints with auto-scaling
+    - **MCP Integration**: Model Context Protocol integration for enhanced AI capabilities
+    - **Heavy Orchestration**: Complex task orchestration with tool execution and progress monitoring
+    - **Comprehensive Monitoring**: Real-time health checks, metrics, alerts, and incident management
+    - **Observability**: Distributed tracing, event streaming, and performance monitoring
+    
+  version: 1.0.0
+  contact:
+    name: Crazy-Gary Development Team
+    email: dev@crazy-gary.com
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: https://crazy-gary-api.railway.app
+    description: Production server (Railway)
+  - url: http://localhost:8080
+    description: Development server
+
+security:
+  - BearerAuth: []
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT token for API authentication
+
+  schemas:
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: Unique user identifier
+        email:
+          type: string
+          format: email
+          description: User email address
+        name:
+          type: string
+          description: User's full name
+        created_at:
+          type: string
+          format: date-time
+          description: User creation timestamp
+        last_login:
+          type: string
+          format: date-time
+          description: Last login timestamp
+
+    AuthRequest:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+          description: User email
+        password:
+          type: string
+          description: User password
+
+    AuthResponse:
+      type: object
+      properties:
+        token:
+          type: string
+          description: JWT access token
+        refresh_token:
+          type: string
+          description: JWT refresh token
+        expires_in:
+          type: integer
+          description: Token expiration time in seconds
+        user:
+          $ref: '#/components/schemas/User'
+
+    Task:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Unique task identifier
+        title:
+          type: string
+          description: Task title
+        description:
+          type: string
+          description: Task description
+        status:
+          type: string
+          enum: [created, running, completed, failed, stopped]
+          description: Current task status
+        model:
+          type: string
+          description: AI model used for the task
+        priority:
+          type: string
+          enum: [low, medium, high, critical]
+          description: Task priority level
+        progress:
+          type: number
+          minimum: 0
+          maximum: 100
+          description: Task completion percentage
+        created_at:
+          type: string
+          format: date-time
+          description: Task creation timestamp
+        updated_at:
+          type: string
+          format: date-time
+          description: Last update timestamp
+
+    EndpointStatus:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [running, sleeping, starting, stopping, unknown, error]
+          description: Endpoint status
+        url:
+          type: string
+          description: HuggingFace endpoint URL
+        last_activity:
+          type: integer
+          description: Unix timestamp of last activity
+        wake_time:
+          type: integer
+          description: Unix timestamp when endpoint was woken
+        sleep_time:
+          type: integer
+          description: Unix timestamp when endpoint was put to sleep
+        auto_sleep_in:
+          type: integer
+          description: Seconds until automatic sleep (if active)
+
+    MCPTool:
+      type: object
+      properties:
+        name:
+          type: string
+          description: Tool name
+        description:
+          type: string
+          description: Tool description
+        schema:
+          type: object
+          description: Tool input schema
+        client:
+          type: string
+          description: MCP client name
+
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [healthy, unhealthy, degraded]
+          description: Service health status
+        service:
+          type: string
+          description: Service name
+        version:
+          type: string
+          description: Service version
+        environment:
+          type: string
+          description: Deployment environment
+        timestamp:
+          type: string
+          format: date-time
+          description: Health check timestamp
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+          description: Error message
+        code:
+          type: string
+          description: Error code
+        details:
+          type: object
+          description: Additional error details
+
+paths:
+  # Health Endpoints
+  /health:
+    get:
+      tags:
+        - Health
+      summary: Basic health check
+      description: Basic health check endpoint for service monitoring
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthStatus'
+
+  /health/ready:
+    get:
+      tags:
+        - Health
+      summary: Readiness check
+      description: Checks if service is ready to accept requests
+      responses:
+        '200':
+          description: Service is ready
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ready
+        '503':
+          description: Service is not ready
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: not ready
+                  missing_env_vars:
+                    type: array
+                    items:
+                      type: string
+
+  # Authentication Endpoints
+  /api/auth/register:
+    post:
+      tags:
+        - Authentication
+      summary: Register new user
+      description: Create a new user account
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - password
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: user@example.com
+                password:
+                  type: string
+                  minLength: 8
+                  example: SecurePassword123
+                fullName:
+                  type: string
+                  example: John Doe
+      responses:
+        '201':
+          description: User created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: User already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/auth/login:
+    post:
+      tags:
+        - Authentication
+      summary: User login
+      description: Authenticate user and get access token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - password
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: user@example.com
+                password:
+                  type: string
+                  example: SecurePassword123
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '401':
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/auth/refresh:
+    post:
+      tags:
+        - Authentication
+      summary: Refresh access token
+      description: Get a new access token using refresh token
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Token refreshed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+                  expires_in:
+                    type: integer
+        '401':
+          description: Invalid or expired refresh token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/auth/me:
+    get:
+      tags:
+        - Authentication
+      summary: Get current user profile
+      description: Get the profile of the currently authenticated user
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: User profile retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    $ref: '#/components/schemas/User'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    put:
+      tags:
+        - Authentication
+      summary: Update user profile
+      description: Update the profile of the currently authenticated user
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  example: John Doe
+      responses:
+        '200':
+          description: Profile updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    $ref: '#/components/schemas/User'
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/auth/change-password:
+    post:
+      tags:
+        - Authentication
+      summary: Change password
+      description: Change the password of the currently authenticated user
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - current_password
+                - new_password
+              properties:
+                current_password:
+                  type: string
+                  example: CurrentPassword123
+                new_password:
+                  type: string
+                  minLength: 8
+                  example: NewSecurePassword123
+      responses:
+        '200':
+          description: Password changed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Password changed successfully
+        '400':
+          description: Invalid input or current password
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/auth/validate:
+    get:
+      tags:
+        - Authentication
+      summary: Validate token
+      description: Validate if the current token is valid and get user info
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Token is valid
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  valid:
+                    type: boolean
+                    example: true
+                  user:
+                    $ref: '#/components/schemas/User'
+        '401':
+          description: Token is invalid
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  valid:
+                    type: boolean
+                    example: false
+
+  # User Management Endpoints
+  /api/users:
+    get:
+      tags:
+        - Users
+      summary: Get all users
+      description: Get a list of all users (admin only)
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: List of users
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/User'
+
+    post:
+      tags:
+        - Users
+      summary: Create user
+      description: Create a new user (admin only)
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - username
+                - email
+              properties:
+                username:
+                  type: string
+                  example: johndoe
+                email:
+                  type: string
+                  format: email
+                  example: john@example.com
+      responses:
+        '201':
+          description: User created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+
+  /api/users/{user_id}:
+    get:
+      tags:
+        - Users
+      summary: Get user by ID
+      description: Get a specific user by ID
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: User ID
+      responses:
+        '200':
+          description: User details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    put:
+      tags:
+        - Users
+      summary: Update user
+      description: Update user information
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: User ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                username:
+                  type: string
+                email:
+                  type: string
+                  format: email
+      responses:
+        '200':
+          description: User updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+
+    delete:
+      tags:
+        - Users
+      summary: Delete user
+      description: Delete a user
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: User ID
+      responses:
+        '204':
+          description: User deleted successfully
+
+  # Agent Orchestration Endpoints
+  /api/tasks:
+    post:
+      tags:
+        - Agent Orchestration
+      summary: Create agent task
+      description: Create a new AI agent task
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - title
+                - description
+              properties:
+                title:
+                  type: string
+                  example: Analyze code repository
+                description:
+                  type: string
+                  example: Scan the repository for potential security vulnerabilities
+                model:
+                  type: string
+                  default: gpt-oss-120b
+                  example: gpt-oss-120b
+                priority:
+                  type: string
+                  enum: [low, medium, high, critical]
+                  default: medium
+                  example: high
+      responses:
+        '201':
+          description: Task created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  task_id:
+                    type: string
+                  status:
+                    type: string
+                    example: created
+
+    get:
+      tags:
+        - Agent Orchestration
+      summary: Get all tasks
+      description: Get a list of all tasks
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: List of tasks
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Task'
+
+  /api/tasks/{task_id}:
+    get:
+      tags:
+        - Agent Orchestration
+      summary: Get task by ID
+      description: Get details of a specific task
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: task_id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Task ID
+      responses:
+        '200':
+          description: Task details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+        '404':
+          description: Task not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/tasks/{task_id}/start:
+    post:
+      tags:
+        - Agent Orchestration
+      summary: Start task execution
+      description: Start executing a created task
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: task_id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Task ID
+      responses:
+        '200':
+          description: Task started successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: started
+        '400':
+          description: Failed to start task
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/tasks/{task_id}/stop:
+    post:
+      tags:
+        - Agent Orchestration
+      summary: Stop task execution
+      description: Stop a running task
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: task_id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Task ID
+      responses:
+        '200':
+          description: Task stopped successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: stopped
+
+  /api/chat:
+    post:
+      tags:
+        - Agent Orchestration
+      summary: Chat with agent
+      description: Send a message to the AI agent and get a response
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - message
+              properties:
+                message:
+                  type: string
+                  example: What can you help me with?
+                context:
+                  type: string
+                  example: I'm working on a Python project
+      responses:
+        '200':
+          description: Chat response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  response:
+                    type: string
+                  task_id:
+                    type: string
+
+  /api/stats:
+    get:
+      tags:
+        - Agent Orchestration
+      summary: Get agent statistics
+      description: Get statistics about agent performance and usage
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Agent statistics
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  total_tasks:
+                    type: integer
+                  active_tasks:
+                    type: integer
+                  completed_tasks:
+                    type: integer
+                  failed_tasks:
+                    type: integer
+
+  # Endpoint Management Endpoints
+  /api/endpoints/status:
+    get:
+      tags:
+        - Endpoint Management
+      summary: Get all endpoint status
+      description: Get status of all HuggingFace inference endpoints
+      responses:
+        '200':
+          description: Endpoint status information
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  endpoints:
+                    type: object
+                    additionalProperties:
+                      $ref: '#/components/schemas/EndpointStatus'
+
+  /api/endpoints/status/{model_type}:
+    get:
+      tags:
+        - Endpoint Management
+      summary: Get specific endpoint status
+      description: Get status of a specific model endpoint
+      parameters:
+        - name: model_type
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [120b, 20b]
+          description: Model type (120b or 20b)
+      responses:
+        '200':
+          description: Endpoint status
+ application/json:
+              schema:
+                $          content:
+           ref: '#/components/schemas/EndpointStatus'
+
+  /api/endpoints/wake:
+   :
+        - Endpoint post:
+      tags Management
+      summary: Wake all endpoints
+      description: Wake up all sleeping HuggingFace endpoints
+      responses:
+        '200':
+          description: Wake operation initiated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+
+  /api/endpoints/wake/{model_type}:
+    post:
+      tags:
+        - Endpoint Management
+      summary: Wake specific endpoint
+      description: Wake up a specific HuggingFace endpoint
+      parameters:
+        - name: model_type
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [120b, 20b]
+          description: Model type (120b or 20b)
+      responses:
+        '200':
+          description: Wake operation initiated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+
+  /api/endpoints/sleep:
+    post:
+      tags:
+        - Endpoint Management
+      summary: Sleep all endpoints
+      description: Put all running HuggingFace endpoints to sleep
+      responses:
+        '200':
+          description: Sleep operation initiated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+
+  /api/endpoints/sleep/{model_type}:
+    post:
+      tags:
+        - Endpoint Management
+      summary: Sleep specific endpoint
+      description: Put a specific HuggingFace endpoint to sleep
+      parameters:
+        - name: model_type
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [120b, 20b]
+          description: Model type (120b or 20b)
+      responses:
+        '200':
+          description: Sleep operation initiated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+
+  # MCP Integration Endpoints
+  /api/mcp/tools:
+    get:
+      tags:
+        - MCP Integration
+      summary: Get all available MCP tools
+      description: Get a list of all available Model Context Protocol tools
+      responses:
+        '200':
+          description: List of MCP tools
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/MCPTool'
+
+  /api/mcp/tools/{client_name}:
+    get:
+      tags:
+        - MCP Integration
+      summary: Get MCP tools for specific client
+      description: Get tools available for a specific MCP client
+      parameters:
+        - name: client_name
+          in: path
+          required: true
+          schema:
+            type: string
+          description: MCP client name
+      responses:
+        '200':
+          description: List of tools for the client
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/MCPTool'
+
+  /api/mcp/tools/search:
+    get:
+      tags:
+        - MCP Integration
+      summary: Search MCP tools
+      description: Search for MCP tools by name or description
+      parameters:
+        - name: query
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Search query
+      responses:
+        '200':
+          description: Search results
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/MCPTool'
+
+  /api/mcp/execute:
+    post:
+      tags:
+        - MCP Integration
+      summary: Execute MCP tool
+      description: Execute a specific MCP tool with parameters
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - tool_name
+                - client_name
+              properties:
+                tool_name:
+                  type: string
+                  example: search_code
+                client_name:
+                  type: string
+                  example: github
+                parameters:
+                  type: object
+                  description: Tool-specific parameters
+      responses:
+        '200':
+          description: Tool execution result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: object
+                  success:
+                    type: boolean
+
+  # Heavy Orchestration Endpoints
+  /api/heavy/orchestrate:
+    post:
+      tags:
+        - Heavy Orchestration
+      summary: Start heavy orchestration
+      description: Start a heavy orchestration task
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - workflow
+              properties:
+                workflow:
+                  type: array
+                  items:
+                    type: object
+                  description: Array of orchestration steps
+                config:
+                  type: object
+                  description: Orchestration configuration
+      responses:
+        '200':
+          description: Orchestration started
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  orchestration_id:
+                    type: string
+                  status:
+                    type: string
+                    example: started
+
+  /api/heavy/progress:
+    get:
+      tags:
+        - Heavy Orchestration
+      summary: Get orchestration progress
+      description: Get progress of heavy orchestration tasks
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: orchestration_id
+          in: query
+          schema:
+            type: string
+          description: Specific orchestration ID to check
+      responses:
+        '200':
+          description: Orchestration progress
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  progress:
+                    type: number
+                    minimum: 0
+                    maximum: 100
+                  status:
+                    type: string
+                  steps:
+                    type: array
+
+  /api/heavy/tools:
+    get:
+      tags:
+        - Heavy Orchestration
+      summary: Get available tools
+      description: Get list of available orchestration tools
+      responses:
+        '200':
+          description: List of available tools
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                    description:
+                      type: string
+                    category:
+                      type: string
+
+  /api/heavy/tools/execute:
+    post:
+      tags:
+        - Heavy Orchestration
+      summary: Execute tool
+      description: Execute a specific orchestration tool
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - tool_name
+                - parameters
+              properties:
+                tool_name:
+                  type: string
+                parameters:
+                  type: object
+      responses:
+        '200':
+          description: Tool execution result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: object
+                  execution_time:
+                    type: number
+
+  # Monitoring Endpoints
+  /api/monitoring/health:
+    get:
+      tags:
+        - Monitoring
+      summary: Basic health monitoring
+      description: Get basic health status of the system
+      responses:
+        '200':
+          description: Health status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthStatus'
+
+  /api/monitoring/health/detailed:
+    get:
+      tags:
+        - Monitoring
+      summary: Detailed health monitoring
+      description: Get detailed health status including component status
+      responses:
+        '200':
+          description: Detailed health status
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  overall:
+                    $ref: '#/components/schemas/HealthStatus'
+                  components:
+                    type: object
+                    additionalProperties:
+                      type: object
+                      properties:
+                        status:
+                          type: string
+                        last_check:
+                          type: string
+                          format: date-time
+                        response_time:
+                          type: number
+
+  /api/monitoring/metrics:
+    get:
+      tags:
+        - Monitoring
+      summary: Get system metrics
+      description: Get various system performance metrics
+      responses:
+        '200':
+          description: System metrics
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  cpu:
+                    type: object
+                  memory:
+                    type: object
+                  disk:
+                    type: object
+                  network:
+                    type: object
+
+  /api/monitoring/logs/requests:
+    get:
+      tags:
+        - Monitoring
+      summary: Get request logs
+      description: Get recent HTTP request logs
+      responses:
+        '200':
+          description: Request logs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    timestamp:
+                      type: string
+                      format: date-time
+                    method:
+                      type: string
+                    path:
+                      type: string
+                    status_code:
+                      type: integer
+                    response_time:
+                      type: number
+
+  /api/monitoring/logs/errors:
+    get:
+      tags:
+        - Monitoring
+      summary: Get error logs
+      description: Get recent error logs
+      responses:
+        '200':
+          description: Error logs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    timestamp:
+                      type: string
+                      format: date-time
+                    level:
+                      type: string
+                    message:
+                      type: string
+                    stack_trace:
+                      type: string
+
+  /api/monitoring/alerts:
+    get:
+      tags:
+        - Monitoring
+      summary: Get active alerts
+      description: Get list of active system alerts
+      responses:
+        '200':
+          description: Active alerts
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+:
+                      type:                    type string
+                    severity:
+                      type: string
+                    message:
+                      type: string
+                    timestamp:
+                      type: string
+                      format: date-time
+
+  # Comprehensive Monitoring Endpoints
+  /api/monitoring/health/dashboard:
+    get:
+      tags:
+        - Comprehensive Monitoring
+      summary: Get monitoring dashboard data
+      description: Get comprehensive dashboard data for system monitoring
+      responses:
+        '200':
+          description: Dashboard data
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  health:
+                    $ref: '#/components/schemas/HealthStatus'
+                  metrics:
+                    type: object
+                  alerts:
+                    type: array
+                  incidents:
+                    type: array
+
+  /api/monitoring/incidents:
+    get:
+      tags:
+        - Comprehensive Monitoring
+      summary: Get incidents
+      description: Get list of system incidents
+      responses:
+        '200':
+          description: List of incidents
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                    title:
+                      type: string
+                    status:
+                      type: string
+                    severity:
+                      type: string
+                    created_at:
+                      type: string
+                      format: date-time
+
+    post:
+      tags:
+        - Comprehensive Monitoring
+      summary: Create incident
+      description: Create a new incident
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - title
+                - severity
+              properties:
+                title:
+                  type: string
+                description:
+                  type: string
+                severity:
+                  type: string
+                  enum: [low, medium, high, critical]
+      responses:
+        '201':
+          description: Incident created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  status:
+                    type: string
+
+  # Observability Endpoints
+  /api/observability/metrics:
+    get:
+      tags:
+        - Observability
+      summary: Get observability metrics
+      description: Get distributed tracing and observability metrics
+      responses:
+        '200':
+          description: Observability metrics
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  traces:
+                    type: object
+                  spans:
+                    type: object
+                  events:
+                    type: object
+
+  /api/observability/traces/active:
+    get:
+      tags:
+        - Observability
+      summary: Get active traces
+      description: Get list of currently active traces
+      responses:
+        '200':
+          description: Active traces
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    trace_id:
+                      type: string
+                    span_id:
+                      type: string
+                    operation_name:
+                      type: string
+                    start_time:
+                      type: string
+                      format: date-time
+
+  /api/observability/events/stream:
+    get:
+      tags:
+        - Observability
+      summary: Stream real-time events
+      description: Stream real-time observability events via Server-Sent Events
+      responses:
+        '200':
+          description: Event stream
+          content:
+            text/event-stream:
+              schema:
+                type: string
+                format: binary
+
+tags:
+  - name: Health
+    description: Health check and monitoring endpoints
+  - name: Authentication
+    description: User authentication and authorization
+  - name: Users
+    description: User management endpoints
+  - name: Agent Orchestration
+    description: AI agent task management and execution
+  - name: Endpoint Management
+    description: HuggingFace inference endpoint management
+  - name: MCP Integration
+    description: Model Context Protocol integration
+  - name: Heavy Orchestration
+    description: Complex task orchestration and execution
+  - name: Monitoring
+    description: System monitoring and health checks
+  - name: Comprehensive Monitoring
+    description: Advanced monitoring with incidents and alerts
+  - name: Observability
+    description: Distributed tracing and observability

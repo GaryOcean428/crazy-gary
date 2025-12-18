@@ -9,15 +9,12 @@ import { Label } from '@/components/ui/label'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { useAuth } from '@/contexts/auth-context'
 import { useToast } from '@/hooks/use-toast'
+import { useZodForm } from '@/hooks/use-zod-form'
+import { registerSchema, type RegisterFormData } from '@/schemas/auth'
 import { Loader2, Bot, Eye, EyeOff, Check, X } from 'lucide-react'
 
 export function Register() {
-  const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    password: '',
-    confirmPassword: ''
-  })
+  const form = useZodForm(registerSchema)
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -27,14 +24,11 @@ export function Register() {
   const { toast } = useToast()
   const navigate = useNavigate()
 
-  const handleChange = (e) => {
-    setFormData(prev => ({
-      ...prev,
-      [e.target.name]: e.target.value
-    }))
-  }
+  // Real-time password validation
+  const password = form.watch('password')
+  const confirmPassword = form.watch('confirmPassword')
 
-  const validatePassword = (password) => {
+  const validatePassword = (password: string) => {
     const checks = {
       length: password.length >= 8,
       uppercase: /[A-Z]/.test(password),
@@ -45,29 +39,22 @@ export function Register() {
     return checks
   }
 
-  const passwordChecks = validatePassword(formData.password)
+  const passwordChecks = password ? validatePassword(password) : {
+    length: false,
+    uppercase: false,
+    lowercase: false,
+    number: false,
+    special: false
+  }
   const isPasswordValid = Object.values(passwordChecks).every(Boolean)
-  const passwordsMatch = formData.password === formData.confirmPassword
+  const passwordsMatch = password === confirmPassword
 
-  const handleSubmit = async (e) => {
-    e.preventDefault()
+  const onSubmit = async (data: RegisterFormData) => {
     setError('')
-
-    // Validation
-    if (!isPasswordValid) {
-      setError('Password does not meet requirements')
-      return
-    }
-
-    if (!passwordsMatch) {
-      setError('Passwords do not match')
-      return
-    }
-
     setLoading(true)
 
     try {
-      const result = await register(formData.email, formData.password, formData.name)
+      const result = await register(data.email, data.password, data.name)
       
       if (result.success) {
         toast({
@@ -76,7 +63,7 @@ export function Register() {
         })
         navigate('/')
       } else {
-        setError(result.error)
+        setError(result.error || 'Registration failed')
       }
     } catch {
       setError('An unexpected error occurred')
@@ -117,7 +104,7 @@ export function Register() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
               {error && (
                 <Alert variant="destructive">
                   <AlertDescription>{error}</AlertDescription>
@@ -127,44 +114,47 @@ export function Register() {
               <div className="space-y-2">
                 <Label htmlFor="name">Full Name</Label>
                 <Input
+                  {...form.register('name')}
                   id="name"
-                  name="name"
                   type="text"
                   placeholder="Enter your full name"
-                  value={formData.name}
-                  onChange={handleChange}
-                  required
                   disabled={loading}
+                  className={form.formState.errors.name ? 'border-red-500' : ''}
                 />
+                {form.formState.errors.name && (
+                  <p className="text-sm text-red-500 mt-1">
+                    {form.formState.errors.name.message}
+                  </p>
+                )}
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
                 <Input
+                  {...form.register('email')}
                   id="email"
-                  name="email"
                   type="email"
                   placeholder="Enter your email"
-                  value={formData.email}
-                  onChange={handleChange}
-                  required
                   disabled={loading}
+                  className={form.formState.errors.email ? 'border-red-500' : ''}
                 />
+                {form.formState.errors.email && (
+                  <p className="text-sm text-red-500 mt-1">
+                    {form.formState.errors.email.message}
+                  </p>
+                )}
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="password">Password</Label>
                 <div className="relative">
                   <Input
+                    {...form.register('password')}
                     id="password"
-                    name="password"
                     type={showPassword ? 'text' : 'password'}
                     placeholder="Create a password"
-                    value={formData.password}
-                    onChange={handleChange}
-                    required
                     disabled={loading}
-                    className="pr-10"
+                    className={`pr-10 ${form.formState.errors.password ? 'border-red-500' : ''}`}
                   />
                   <Button
                     type="button"
@@ -183,7 +173,7 @@ export function Register() {
                 </div>
                 
                 {/* Password Requirements */}
-                {formData.password && (
+                {password && (
                   <div className="space-y-1 p-3 bg-muted rounded-md">
                     <div className="text-xs font-medium mb-2">Password Requirements:</div>
                     <PasswordRequirement met={passwordChecks.length} text="At least 8 characters" />
@@ -193,21 +183,23 @@ export function Register() {
                     <PasswordRequirement met={passwordChecks.special} text="One special character" />
                   </div>
                 )}
+                {form.formState.errors.password && (
+                  <p className="text-sm text-red-500 mt-1">
+                    {form.formState.errors.password.message}
+                  </p>
+                )}
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="confirmPassword">Confirm Password</Label>
                 <div className="relative">
                   <Input
+                    {...form.register('confirmPassword')}
                     id="confirmPassword"
-                    name="confirmPassword"
                     type={showConfirmPassword ? 'text' : 'password'}
                     placeholder="Confirm your password"
-                    value={formData.confirmPassword}
-                    onChange={handleChange}
-                    required
                     disabled={loading}
-                    className="pr-10"
+                    className={`pr-10 ${form.formState.errors.confirmPassword ? 'border-red-500' : ''}`}
                   />
                   <Button
                     type="button"
@@ -225,18 +217,23 @@ export function Register() {
                   </Button>
                 </div>
                 
-                {formData.confirmPassword && (
+                {confirmPassword && (
                   <div className={`text-xs flex items-center space-x-2 ${passwordsMatch ? 'text-green-600' : 'text-red-600'}`}>
                     {passwordsMatch ? <Check className="h-3 w-3" /> : <X className="h-3 w-3" />}
                     <span>{passwordsMatch ? 'Passwords match' : 'Passwords do not match'}</span>
                   </div>
+                )}
+                {form.formState.errors.confirmPassword && (
+                  <p className="text-sm text-red-500 mt-1">
+                    {form.formState.errors.confirmPassword.message}
+                  </p>
                 )}
               </div>
 
               <Button 
                 type="submit" 
                 className="w-full" 
-                disabled={loading || !formData.name || !formData.email || !isPasswordValid || !passwordsMatch}
+                disabled={loading || !form.formState.isValid}
               >
                 {loading ? (
                   <>

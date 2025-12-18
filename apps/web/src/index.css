@@ -1,5 +1,6 @@
 /* ✅ RAILWAY FIX: Proper CSS import order for Railway deployment */
 @import "./App.css";
+@import "./styles/animations.css";
 
 /* Critical theme styles loaded early to prevent FOUC */
 .dark {
@@ -8,4 +9,27 @@
 
 .light {
   color-scheme: light;
+}
+
+/* Additional animation utilities */
+@layer utilities {
+  .animate-shimmer {
+    animation: shimmer 1.5s infinite;
+  }
+  
+  .animate-wave {
+    animation: wave 2s infinite ease-in-out;
+  }
+  
+  .animate-fade-in-up {
+    animation: fadeInUp 0.3s ease-out;
+  }
+  
+  .animate-slide-in-right {
+    animation: slideInRight 0.3s ease-out;
+  }
+  
+  .animate-bounce-in {
+    animation: bounce-in 0.5s ease-out;
+  }
 }

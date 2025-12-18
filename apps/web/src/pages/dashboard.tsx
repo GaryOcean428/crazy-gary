@@ -5,6 +5,28 @@ import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
 import { Separator } from '@/components/ui/separator'
 import { 
+  LoadingSpinner, 
+  CardSkeleton, 
+  ListSkeleton,
+  TableSkeleton 
+} from '@/components/ui/loading-skeleton'
+import { 
+  EmptyState, 
+  EmptyDashboardState 
+} from '@/components/ui/empty-state'
+import { 
+  HoverInteraction, 
+  CardHover, 
+  FeedbackAnimation,
+  PageTransition 
+} from '@/components/ui/micro-interactions'
+import { useToast } from '@/hooks/use-toast'
+import { 
+  useListAnimation, 
+  usePrefersReducedMotion,
+  useLoadingAnimation 
+} from '@/hooks/use-animation-hooks'
+import { 
   Activity, 
   Brain, 
   Zap, 
@@ -31,6 +53,13 @@ import {
 } from '@/lib/component-utils'
 
 export function Dashboard() {
+  const [pageTitle] = useState('Dashboard');
+  const [isLoading, setIsLoading] = useState(true)
+  const [isRefreshing, setIsRefreshing] = useState(false)
+  const [showSuccessFeedback, setShowSuccessFeedback] = useState(false)
+  const { toast } = useToast()
+  const prefersReducedMotion = usePrefersReducedMotion()
+  
   const [systemStats, setSystemStats] = useState(
     formatSystemStats({
       tasksCompleted: 156,
@@ -97,7 +126,19 @@ export function Dashboard() {
     network: 12
   })
 
+  const [initialLoad, setInitialLoad] = useState(true)
+
+  // Simulate initial loading
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsLoading(false)
+      setInitialLoad(false)
+    }, 2000)
+    return () => clearTimeout(timer)
+  }, [])
+
   const fetchDashboardData = useCallback(async () => {
+    setIsRefreshing(true)
     try {
       // Simulate real-time data updates
       setSystemStats(prev => ({
@@ -155,8 +196,15 @@ export function Dashboard() {
       */
     } catch (error) {
       console.error('Failed to fetch dashboard data:', error)
+      toast({
+        title: "Error",
+        description: "Failed to refresh dashboard data",
+        variant: "destructive"
+      })
+    } finally {
+      setIsRefreshing(false)
     }
-  }, [])
+  }, [toast])
 
   useEffect(() => {
     fetchDashboardData()
@@ -201,7 +249,7 @@ export function Dashboard() {
   }
 
   const StatCard = ({ title, value, change, icon: Icon, trend = 'up' }) => (
-    <Card className="group hover:shadow-lg transition-all duration-300 border-border/50 hover:border-primary/20">
+    <CardHover className="group border-border/50 hover:border-primary/20">
       <CardContent className="p-6">
         <div className="flex items-center justify-between">
           <div className="space-y-2">
@@ -233,8 +281,25 @@ export function Dashboard() {
     </Card>
   )
 
+  if (initialLoad) {
+    return (
+      <div className="space-y-6">
+        <div className="space-y-2">
+          <div className="h-8 w-48 bg-muted rounded animate-pulse" />
+          <div className="h-4 w-96 bg-muted rounded animate-pulse" />
+        </div>
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <CardSkeleton key={i} />
+          ))}
+        </div>
+        <CardSkeleton />
+      </div>
+    )
+  }
+
   return (
-    <div className="space-y-8 animate-in fade-in slide-up">
+    <PageTransition className="space-y-8">
       {/* Enhanced Header */}
       <div className="space-y-2">
         <div className="flex items-center space-x-2">

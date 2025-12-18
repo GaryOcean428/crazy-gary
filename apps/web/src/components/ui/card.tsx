@@ -10,7 +10,7 @@ const Card = React.forwardRef<
     ref={ref}
     data-slot="card"
     className={cn(
-      "bg-card text-card-foreground flex flex-col gap-6 rounded-xl border py-6 shadow-sm",
+      "card-responsive bg-card text-card-foreground flex flex-col gap-4 sm:gap-6 rounded-xl border py-4 sm:py-6 shadow-sm interactive-mobile",
       className
     )}
     {...props}
@@ -26,7 +26,7 @@ const CardHeader = React.forwardRef<
     ref={ref}
     data-slot="card-header"
     className={cn(
-      "@container/card-header grid auto-rows-min grid-rows-[auto_auto] items-start gap-1.5 px-6 has-data-[slot=card-action]:grid-cols-[1fr_auto] [.border-b]:pb-6",
+      "@container/card-header grid auto-rows-min grid-rows-[auto_auto] items-start gap-1.5 px-3 sm:px-6 has-data-[slot=card-action]:grid-cols-[1fr_auto] [.border-b]:pb-3 sm:[.border-b]:pb-6",
       className
     )}
     {...props}
@@ -41,7 +41,7 @@ const CardTitle = React.forwardRef<
   <h3
     ref={ref}
     data-slot="card-title"
-    className={cn("leading-none font-semibold", className)}
+    className={cn("text-responsive-lg leading-none font-semibold", className)}
     {...props}
   />
 ))
@@ -54,7 +54,7 @@ const CardDescription = React.forwardRef<
   <p
     ref={ref}
     data-slot="card-description"
-    className={cn("text-muted-foreground text-sm", className)}
+    className={cn("text-muted-foreground text-responsive-sm", className)}
     {...props}
   />
 ))
@@ -68,7 +68,7 @@ const CardAction = React.forwardRef<
     ref={ref}
     data-slot="card-action"
     className={cn(
-      "col-start-2 row-span-2 row-start-1 self-start justify-self-end",
+      "col-start-2 row-span-2 row-start-1 self-start justify-self-end mt-1 sm:mt-0",
       className
     )}
     {...props}
@@ -83,7 +83,7 @@ const CardContent = React.forwardRef<
   <div 
     ref={ref}
     data-slot="card-content" 
-    className={cn("px-6", className)} 
+    className={cn("px-3 sm:px-6", className)} 
     {...props} 
   />
 ))
@@ -96,7 +96,7 @@ const CardFooter = React.forwardRef<
   <div
     ref={ref}
     data-slot="card-footer"
-    className={cn("flex items-center px-6 [.border-t]:pt-6", className)}
+    className={cn("flex items-center px-3 sm:px-6 [.border-t]:pt-3 sm:[.border-t]:pt-6 gap-2 sm:gap-4", className)}
     {...props}
   />
 ))

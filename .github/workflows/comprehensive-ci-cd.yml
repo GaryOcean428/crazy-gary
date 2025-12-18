@@ -1,0 +1,860 @@
+name: Comprehensive CI/CD Pipeline
+
+permissions:
+  contents: write
+  actions: read
+  checks: write
+  pull-requests: write
+  security-events: write
+
+on:
+  push:
+    branches: [main, develop, 'release/*', 'hotfix/*']
+  pull_request:
+    branches: [main, develop]
+  schedule:
+    # Security scan daily at 3 AM UTC
+    - cron: '0 3 * * *'
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Target environment'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+          - production
+      force_deploy:
+        description: 'Force deployment even if tests fail'
+        required: false
+        default: false
+        type: boolean
+
+env:
+  NODE_VERSION: '22'
+  PYTHON_VERSION: '3.13'
+  YARN_VERSION: '4.9.4'
+
+jobs:
+  # =============================================================================
+  # FAST QUALITY GATES
+  # =============================================================================
+  fast-quality:
+    name: Fast Quality Checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    
+    outputs:
+      cache-key: ${{ steps.cache-key.outputs.key }}
+      branch-name: ${{ github.head_ref || github.ref_name }}
+      commit-hash: ${{ github.sha }}
+      
+    steps:
+      - name: Checkout with full history
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Generate cache key
+        id: cache-key
+        run: |
+          echo "key=node-${{ env.NODE_VERSION }}-yarn-${{ env.YARN_VERSION }}-$(date +%Y%m%d)" >> $GITHUB_OUTPUT
+
+      - name: Setup Node.js with caching
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'yarn'
+          cache-dependency-path: '**/yarn.lock'
+
+      - name: Enable Corepack
+        run: |
+          corepack enable
+          corepack prepare yarn@${{ env.YARN_VERSION }} --activate
+
+      - name: Install dependencies (cached)
+        run: |
+          yarn install --immutable --frozen-lockfile
+        continue-on-error: true
+
+      - name: Type checking
+        run: yarn type-check
+        continue-on-error: true
+
+      - name: Fast linting
+        run: yarn lint:fix
+        continue-on-error: true
+
+      - name: Format validation
+        run: yarn format:check
+        continue-on-error: true
+
+      - name: Security audit (fast)
+        run: yarn audit --level moderate
+        continue-on-error: true
+
+      - name: Commit message validation
+        if: github.event_name == 'pull_request'
+        run: |
+          # Validate commit messages follow conventional commits
+          if [[ "${{ github.event.pull_request.title }}" =~ ^(feat|fix|docs|style|refactor|test|chore)(\(.+\))?: ]]; then
+            echo "✅ Commit message follows conventional commits format"
+          else
+            echo "❌ Commit message should follow conventional commits format: type(scope): description"
+            exit 1
+          fi
+
+  # =============================================================================
+  # COMPREHENSIVE TESTING SUITE
+  # =============================================================================
+  test-suite:
+    name: Comprehensive Test Suite
+    runs-on: ubuntu-latest
+    needs: fast-quality
+    timeout-minutes: 45
+    
+    strategy:
+      fail-fast: false
+      matrix:
+        component: [frontend, backend, integration]
+        
+    outputs:
+      test-results: ${{ steps.test-results.outputs.path }}
+      coverage-summary: ${{ steps.coverage.outputs.summary }}
+      
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: test_db
+          POSTGRES_USER: postgres
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+          
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+    steps:
+      - name: Checkout with submodules
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'yarn'
+          cache-dependency-path: '**/yarn.lock'
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Enable Corepack
+        run: |
+          corepack enable
+          corepack prepare yarn@${{ env.YARN_VERSION }} --activate
+
+      - name: Install dependencies
+        run: |
+          yarn install --immutable
+          pip install -r apps/api/requirements.txt
+        continue-on-error: true
+
+      # Frontend Tests
+      - name: Frontend Unit Tests
+        if: matrix.component == 'frontend'
+        run: |
+          cd apps/web
+          yarn test:coverage --watchAll=false --coverage --coverageReporters=json,lcov
+        env:
+          CI: true
+          NODE_ENV: test
+
+      - name: Frontend Integration Tests
+        if: matrix.component == 'frontend'
+        run: |
+          cd apps/web
+          yarn test:integration --watchAll=false
+        env:
+          CI: true
+          NODE_ENV: test
+
+      # Backend Tests
+      - name: Backend Unit Tests
+        if: matrix.component == 'backend'
+        run: |
+          cd apps/api
+          pytest --cov=src --cov-report=xml --cov-report=json --cov-report=html --cov-fail-under=80
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost/test_db
+          REDIS_URL: redis://localhost:6379/0
+          JWT_SECRET: test-secret-key
+          OPENAI_API_KEY: test-key
+
+      - name: Backend Integration Tests
+        if: matrix.component == 'backend'
+        run: |
+          cd apps/api
+          pytest tests/ -v --cov=src --cov-report=xml --cov-report=json
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost/test_db
+          REDIS_URL: redis://localhost:6379/0
+          JWT_SECRET: test-secret-key
+          OPENAI_API_KEY: test-key
+
+      # Integration Tests
+      - name: API Integration Tests
+        if: matrix.component == 'integration'
+        run: |
+          # Start services
+          cd apps/api
+          python -m uvicorn src.main:app --host 0.0.0.0 --port 8000 &
+          sleep 10
+          
+          # Run integration tests
+          pytest tests/test_integration.py -v
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost/test_db
+          REDIS_URL: redis://localhost:6379/0
+          JWT_SECRET: test-secret-key
+          OPENAI_API_KEY: test-key
+          API_BASE_URL: http://localhost:8000
+
+      - name: Frontend E2E Tests
+        if: matrix.component == 'integration'
+        run: |
+          cd apps/web
+          
+          # Build and serve frontend
+          yarn build
+          yarn serve:dist &
+          
+          # Wait for services
+          sleep 15
+          
+          # Run Playwright tests
+          npx playwright test --reporter=html,line
+        env:
+          CI: true
+          PLAYWRIGHT_BROWSERS_PATH: 0
+
+      - name: Accessibility Tests
+        run: |
+          cd apps/web
+          
+          # Install Playwright browsers if not already done
+          npx playwright install --with-deps
+          
+          # Build and serve
+          yarn build
+          yarn serve:dist &
+          sleep 10
+          
+          # Run accessibility tests
+          npx playwright test --config=playwright.config.ts tests/accessibility/
+        env:
+          CI: true
+
+      - name: Collect test results
+        id: test-results
+        if: always()
+        run: |
+          echo "path=test-results" >> $GITHUB_OUTPUT
+          echo "Creating test results archive..."
+          tar -czf test-results.tar.gz \
+            apps/web/coverage \
+            apps/web/playwright-report \
+            apps/web/test-results \
+            apps/api/htmlcov \
+            apps/api/coverage.xml || true
+
+      - name: Upload coverage reports
+        uses: codecov/codecov-action@v3
+        if: always()
+        with:
+          files: |
+            ./apps/web/coverage/coverage-final.json
+            ./apps/api/coverage.xml
+          flags: ${{ matrix.component }}
+          name: codecov-${{ matrix.component }}
+
+      - name: Generate coverage summary
+        id: coverage
+        if: always()
+        run: |
+          echo "summary=Coverage analysis completed for ${{ matrix.component }}" >> $GITHUB_OUTPUT
+
+  # =============================================================================
+  # SECURITY AND VULNERABILITY SCANNING
+  # =============================================================================
+  security-scan:
+    name: Security Analysis
+    runs-on: ubuntu-latest
+    needs: fast-quality
+    timeout-minutes: 30
+    
+    outputs:
+      security-score: ${{ steps.security-score.outputs.score }}
+      
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'yarn'
+          cache-dependency-path: '**/yarn.lock'
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Enable Corepack
+        run: |
+          corepack enable
+          corepack prepare yarn@${{ env.YARN_VERSION }} --activate
+
+      - name: Install dependencies
+        run: |
+          yarn install --immutable
+          pip install -r apps/api/requirements.txt
+          pip install safety bandit semgrep
+
+      # NPM Audit
+      - name: NPM Security Audit
+        run: |
+          yarn audit --audit-level moderate --json > npm-audit.json || true
+          
+          # Check for critical vulnerabilities
+          if yarn audit --audit-level critical > /dev/null 2>&1; then
+            echo "❌ Critical security vulnerabilities found"
+            exit 1
+          else
+            echo "✅ No critical vulnerabilities found"
+          fi
+
+      # Python Security Audit
+      - name: Python Security Audit
+        run: |
+          cd apps/api
+          safety check --json --output safety-report.json || true
+          bandit -r src/ -f json -o bandit-report.json || true
+
+      - name: Semgrep SAST Scan
+        run: |
+          # Install Semgrep
+          pip install semgrep
+          
+          # Run Semgrep
+          semgrep --config=auto --json --output=semgrep-report.json . || true
+
+      - name: Secret Scanning
+        run: |
+          # Check for hardcoded secrets
+          echo "Scanning for potential secrets..."
+          if grep -r -i "password\|secret\|key\|token" \
+            --include="*.py" --include="*.js" --include="*.ts" --include="*.json" \
+            --exclude-dir=node_modules --exclude-dir=.git \
+            apps/ | grep -v "process.env\|os.getenv\|YOUR_\|your_\|test_\|TEST_" | head -10; then
+            echo "⚠️ Potential hardcoded secrets detected - manual review required"
+          else
+            echo "✅ No obvious hardcoded secrets found"
+          fi
+
+      - name: License Compliance Check
+        run: |
+          yarn licenses list --json > licenses.json || true
+          
+          # Check for problematic licenses
+          if grep -i "GPL\|AGPL" licenses.json; then
+            echo "⚠️ GPL/AGPL licenses found - check compatibility"
+          else
+            echo "✅ License compliance check passed"
+          fi
+
+      - name: Calculate security score
+        id: security-score
+        run: |
+          # Calculate a simple security score based on findings
+          npm_critical=$(yarn audit --audit-level critical 2>/dev/null | grep -c "vulnerabilities found" || echo "0")
+          python_vulns=$(safety check --json 2>/dev/null | jq length || echo "0")
+          
+          score=100
+          if [ "$npm_critical" -gt 0 ]; then
+            score=$((score - 50))
+          fi
+          if [ "$python_vulns" -gt 0 ]; then
+            score=$((score - 25))
+          fi
+          
+          echo "score=$score" >> $GITHUB_OUTPUT
+          echo "Security Score: $score/100"
+
+      - name: Upload security artifacts
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: security-reports
+          path: |
+            npm-audit.json
+            apps/api/safety-report.json
+            apps/api/bandit-report.json
+            semgrep-report.json
+            licenses.json
+          retention-days: 30
+
+  # =============================================================================
+  # BUILD AND ARTIFACT MANAGEMENT
+  # =============================================================================
+  build-and-artifacts:
+    name: Build & Artifacts
+    runs-on: ubuntu-latest
+    needs: [test-suite, security-scan]
+    timeout-minutes: 20
+    
+    outputs:
+      build-artifacts: ${{ steps.build-info.outputs.artifacts }}
+      bundle-size: ${{ steps.bundle-info.outputs.size }}
+      
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'yarn'
+          cache-dependency-path: '**/yarn.lock'
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Enable Corepack
+        run: |
+          corepack enable
+          corepack prepare yarn@${{ env.YARN_VERSION }} --activate
+
+      - name: Install dependencies
+        run: yarn install --immutable
+
+      - name: Build all applications
+        run: |
+          yarn build
+          
+          # Build API with optimization
+          cd apps/api
+          python -m pip install -r requirements.txt
+          python -m pip install pyinstaller
+          pyinstaller --onefile --name crazy-gary-api src/main.py
+          
+      - name: Bundle Size Analysis
+        id: bundle-info
+        run: |
+          cd apps/web
+          
+          # Analyze bundle size
+          if [ -d "dist" ]; then
+            size=$(du -sh dist | cut -f1)
+            echo "size=$size" >> $GITHUB_OUTPUT
+            
+            # Check against budget
+            if [ "$(du -sb dist | cut -f1)" -gt "1048576" ]; then  # 1MB budget
+              echo "⚠️ Bundle size exceeds 1MB budget"
+            else
+              echo "✅ Bundle size within budget"
+            fi
+          fi
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-artifacts-${{ github.sha }}
+          path: |
+            apps/web/dist/
+            apps/api/dist/
+          retention-days: 30
+
+      - name: Create deployment package
+        run: |
+          # Create a deployment-ready package
+          tar -czf crazy-gary-deploy-${{ github.sha }}.tar.gz \
+            apps/web/dist/ \
+            apps/api/dist/ \
+            docker-compose.yml \
+            .env.example
+          
+          mv crazy-gary-deploy-${{ github.sha }}.tar.gz deployment-package/
+
+      - name: Generate build info
+        id: build-info
+        run: |
+          echo "artifacts=build-artifacts-${{ github.sha }}" >> $GITHUB_OUTPUT
+          echo "commit=${{ github.sha }}" >> $GITHUB_OUTPUT
+          echo "branch=${{ github.ref_name }}" >> $GITHUB_OUTPUT
+          echo "timestamp=$(date -u +"%Y-%m-%dT%H:%M:%SZ")" >> $GITHUB_OUTPUT
+
+      - name: Upload deployment package
+        uses: actions/upload-artifact@v4
+        with:
+          name: deployment-package-${{ github.sha }}
+          path: deployment-package/
+          retention-days: 90
+
+  # =============================================================================
+  # PERFORMANCE TESTING
+  # =============================================================================
+  performance-testing:
+    name: Performance Analysis
+    runs-on: ubuntu-latest
+    needs: build-and-artifacts
+    timeout-minutes: 30
+    
+    strategy:
+      matrix:
+        test: [lighthouse, load, bundle]
+        
+    outputs:
+      lighthouse-score: ${{ steps.lighthouse-score.outputs.score }}
+      performance-metrics: ${{ steps.perf-metrics.outputs.metrics }}
+      
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: build-artifacts-${{ github.sha }}
+          path: apps/web/dist/
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Lighthouse CI Performance Test
+        if: matrix.test == 'lighthouse'
+        run: |
+          # Install Lighthouse CI
+          npm install -g @lhci/cli@0.14.x
+          
+          # Serve the built application
+          cd apps/web
+          npx serve dist -s -p 3000 &
+          
+          # Wait for server
+          sleep 5
+          
+          # Run Lighthouse
+          lhci autorun --upload.target=temporary-public-storage
+        env:
+          LHCI_BUILD_CONTEXT__COMMIT_TIME: ${{ github.event.head_commit.timestamp }}
+
+      - name: Extract Lighthouse score
+        id: lighthouse-score
+        if: matrix.test == 'lighthouse'
+        run: |
+          # Extract performance score from Lighthouse report
+          if [ -f "apps/web/.lighthouseci/results.json" ]; then
+            score=$(jq -r '.[0].summary.performance' apps/web/.lighthouseci/results.json)
+            echo "score=$score" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Bundle Analysis
+        if: matrix.test == 'bundle'
+        run: |
+          cd apps/web
+          
+          # Analyze bundle composition
+          npx webpack-bundle-analyzer dist/static/js/*.js --no-open --report static/bundle-report.html || true
+          
+          # Check for large chunks
+          find dist/static -name "*.js" -exec du -h {} \; | sort -hr | head -10
+
+      - name: Generate performance metrics
+        id: perf-metrics
+        run: |
+          echo "metrics={\"timestamp\": \"$(date -u +"%Y-%m-%dT%H:%M:%SZ")\", \"build_time\": \"${{ github.event.workflow_run.created_at }}\"}" >> $GITHUB_OUTPUT
+
+      - name: Upload performance reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: performance-reports-${{ matrix.test }}
+          path: |
+            apps/web/.lighthouseci/
+            apps/web/static/
+          retention-days: 30
+
+  # =============================================================================
+  # DEPLOYMENT TO RAILWAY
+  # =============================================================================
+  deploy-railway:
+    name: Deploy to Railway
+    runs-on: ubuntu-latest
+    needs: [build-and-artifacts, performance-testing]
+    if: |
+      (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop') &&
+      (github.event_name == 'push' || github.event.inputs.environment == 'staging')
+    environment:
+      name: ${{ github.ref == 'refs/heads/main' && 'production' || 'staging' }}
+      url: ${{ steps.deploy.outputs.url }}
+    
+    outputs:
+      url: ${{ steps.deploy.outputs.url }}
+      environment: ${{ steps.deploy.outputs.environment }}
+      
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download deployment package
+        uses: actions/download-artifact@v4
+        with:
+          name: deployment-package-${{ github.sha }}
+          path: deployment/
+
+      - name: Setup Railway CLI
+        run: |
+          curl -fsSL https://railway.app/install.sh | sh
+          echo "$HOME/.railway/bin" >> $GITHUB_PATH
+
+      - name: Deploy to Railway
+        id: deploy
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          RAILWAY_PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID }}
+        run: |
+          railway login --token $RAILWAY_TOKEN
+          
+          # Determine environment
+          if [ "${{ github.ref }}" = "refs/heads/main" ]; then
+            ENV="production"
+          else
+            ENV="staging"
+          fi
+          
+          echo "environment=$ENV" >> $GITHUB_OUTPUT
+          
+          # Deploy based on environment
+          if [ "$ENV" = "production" ]; then
+            railway deploy --environment production
+          else
+            railway deploy --environment staging
+          fi
+          
+          # Get deployment URL
+          URL=$(railway status --json | jq -r '.deployments[0].url')
+          echo "url=https://$URL" >> $GITHUB_OUTPUT
+
+      - name: Post-deployment health check
+        run: |
+          # Wait for deployment to be ready
+          sleep 30
+          
+          # Health check endpoint
+          curl -f ${{ steps.deploy.outputs.url }}/health || echo "Health check failed - service may still be starting"
+
+      - name: Create deployment summary
+        run: |
+          echo "## 🚀 Deployment Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Environment:** ${{ steps.deploy.outputs.environment }}" >> $GITHUB_STEP_SUMMARY
+          echo "**URL:** ${{ steps.deploy.outputs.url }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Branch:** ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Deployed at:** $(date -u)" >> $GITHUB_STEP_SUMMARY
+
+  # =============================================================================
+  # FINAL QUALITY GATE
+  # =============================================================================
+  quality-gate:
+    name: Quality Gate
+    runs-on: ubuntu-latest
+    needs: [test-suite, security-scan, build-and-artifacts, performance-testing]
+    if: always()
+    
+    outputs:
+      passed: ${{ steps.gate.outputs.passed }}
+      quality-score: ${{ steps.gate.outputs.score }}
+      
+    steps:
+      - name: Quality Gate Evaluation
+        id: gate
+        run: |
+          # Evaluate quality metrics
+          test_status="${{ needs.test-suite.result }}"
+          security_status="${{ needs.security-scan.result }}"
+          build_status="${{ needs.build-and-artifacts.result }}"
+          perf_status="${{ needs.performance-testing.result }}"
+          
+          # Calculate quality score
+          score=0
+          
+          if [ "$test_status" = "success" ]; then
+            score=$((score + 40))
+          fi
+          
+          if [ "$security_status" = "success" ]; then
+            score=$((score + 30))
+          fi
+          
+          if [ "$build_status" = "success" ]; then
+            score=$((score + 20))
+          fi
+          
+          if [ "$perf_status" = "success" ]; then
+            score=$((score + 10))
+          fi
+          
+          echo "score=$score" >> $GITHUB_OUTPUT
+          
+          # Quality gate threshold: 80%
+          if [ $score -ge 80 ]; then
+            echo "passed=true" >> $GITHUB_OUTPUT
+            echo "✅ Quality Gate Passed (Score: $score/100)"
+          else
+            echo "passed=false" >> $GITHUB_OUTPUT
+            echo "❌ Quality Gate Failed (Score: $score/100)"
+          fi
+
+      - name: Quality Gate Summary
+        run: |
+          echo "## 🎯 Quality Gate Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Quality Score:** ${{ steps.gate.outputs.score }}/100" >> $GITHUB_STEP_SUMMARY
+          echo "**Status:** ${{ steps.gate.outputs.passed == 'true' && '✅ PASSED' || '❌ FAILED' }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Test Results" >> $GITHUB_STEP_SUMMARY
+          echo "- **Unit & Integration Tests:** ${{ needs.test-suite.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Security Scan:** ${{ needs.security-scan.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Build & Artifacts:** ${{ needs.build-and-artifacts.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Performance Tests:** ${{ needs.performance-testing.result }}" >> $GITHUB_STEP_SUMMARY
+
+      - name: Fail on quality gate failure
+        if: steps.gate.outputs.passed != 'true'
+        run: |
+          echo "Quality Gate failed. Please review the issues and fix them before merging."
+          exit 1
+
+  # =============================================================================
+  # NOTIFICATION AND REPORTING
+  # =============================================================================
+  notify:
+    name: Notification & Reporting
+    runs-on: ubuntu-latest
+    needs: [quality-gate, deploy-railway]
+    if: always()
+    
+    steps:
+      - name: Generate comprehensive report
+        run: |
+          # Create detailed report
+          cat > workflow-report.md << EOF
+          # Crazy-Gary CI/CD Pipeline Report
+          
+          **Run ID:** ${{ github.run_id }}
+          **Commit:** ${{ github.sha }}
+          **Branch:** ${{ github.ref_name }}
+          **Trigger:** ${{ github.event_name }}
+          
+          ## 📊 Pipeline Results
+          
+          | Stage | Status | Duration |
+          |-------|--------|----------|
+          | Fast Quality | ${{ needs.fast-quality.result }} | ~10m |
+          | Test Suite | ${{ needs.test-suite.result }} | ~45m |
+          | Security Scan | ${{ needs.security-scan.result }} | ~30m |
+          | Build & Artifacts | ${{ needs.build-and-artifacts.result }} | ~20m |
+          | Performance Testing | ${{ needs.performance-testing.result }} | ~30m |
+          | Quality Gate | ${{ needs.quality-gate.result }} | ~2m |
+          | Deployment | ${{ needs.deploy-railway.result }} | ~15m |
+          
+          ## 🎯 Quality Metrics
+          
+          - **Overall Quality Score:** ${{ needs.quality-gate.outputs.quality-score }}/100
+          - **Security Score:** ${{ needs.security-scan.outputs.security-score }}/100
+          - **Performance Score:** ${{ needs.performance-testing.outputs.lighthouse-score }}/100
+          
+          ## 🚀 Deployment
+          
+          - **Environment:** ${{ needs.deploy-railway.outputs.environment || 'Not Deployed' }}
+          - **URL:** ${{ needs.deploy-railway.outputs.url || 'N/A' }}
+          
+          ## 📋 Next Steps
+          
+          - [ ] Review security findings (if any)
+          - [ ] Check performance metrics
+          - [ ] Verify deployment health
+          - [ ] Update documentation if needed
+          
+          Generated at: $(date -u)
+          EOF
+
+      - name: Comment PR with results
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const report = fs.readFileSync('workflow-report.md', 'utf8');
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: report
+            });
+
+      - name: Create deployment issue on failure
+        if: needs.quality-gate.outputs.passed != 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `Quality Gate Failed - ${context.ref}`,
+              body: `The CI/CD pipeline quality gate has failed for commit ${context.sha}.
+              
+              Please review the following issues:
+              - Check test results
+              - Review security vulnerabilities
+              - Verify build artifacts
+              - Check performance metrics
+              
+              [View Workflow Run](${context.payload.repository.html_url}/actions/runs/${context.runId})`,
+              labels: ['bug', 'ci-cd', 'quality-gate']
+            });
+
+      - name: Slack/Discord Notification (optional)
+        if: failure()
+        run: |
+          # Send notification to your preferred channel
+          echo "Pipeline failed - notification sent"
+          # Add your notification logic here

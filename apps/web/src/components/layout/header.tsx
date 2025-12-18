@@ -103,35 +103,41 @@ export function Header({ sidebarOpen, setSidebarOpen, currentTask }) {
   }
 
   return (
-    <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-6">
-      <div className="flex items-center space-x-4">
+    <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-4 sm:px-6 safe-top">
+      <div className="flex items-center space-x-2 sm:space-x-4 min-w-0 flex-1">
         {/* Mobile menu button */}
         <Button
           variant="ghost"
           size="sm"
-          className="md:hidden"
+          className="md:hidden btn-touch"
           onClick={() => setSidebarOpen(!sidebarOpen)}
+          aria-label="Toggle sidebar"
         >
           <Menu className="h-4 w-4" />
         </Button>
 
-        {/* Current task indicator */}
+        {/* Current task indicator - responsive */}
         {currentTask && (
-          <div className="flex items-center space-x-2">
-            <div className="flex h-2 w-2 rounded-full bg-blue-500 animate-pulse" />
-            <span className="text-sm font-medium">
-              Task: {currentTask.title}
-            </span>
-            <Badge variant="secondary" className="text-xs">
+          <div className="flex items-center space-x-2 min-w-0 flex-1 sm:flex-initial">
+            <div className="flex h-2 w-2 rounded-full bg-blue-500 animate-pulse flex-shrink-0" />
+            <div className="min-w-0 flex-1 sm:flex-none">
+              <span className="text-xs sm:text-sm font-medium truncate block sm:inline">
+                Task: {currentTask.title}
+              </span>
+              <Badge variant="secondary" className="text-xs ml-2 hidden sm:inline-block">
+                {currentTask.status}
+              </Badge>
+            </div>
+            <Badge variant="secondary" className="text-xs sm:hidden ml-2">
               {currentTask.status}
             </Badge>
           </div>
         )}
       </div>
 
-      <div className="flex items-center space-x-4">
-        {/* Status indicators */}
-        <div className="flex items-center space-x-3">
+      <div className="flex items-center space-x-2 sm:space-x-4">
+        {/* Status indicators - responsive */}
+        <div className="hidden sm:flex items-center space-x-3">
           <div className="flex items-center space-x-1">
             <div className={`h-2 w-2 rounded-full ${getStatusColor(systemStatus)}`} />
             <span className="text-xs text-muted-foreground">
@@ -147,25 +153,36 @@ export function Header({ sidebarOpen, setSidebarOpen, currentTask }) {
           </div>
         </div>
 
+        {/* Mobile status indicators */}
+        <div className="sm:hidden flex items-center space-x-2">
+          <div className={`h-2 w-2 rounded-full ${getStatusColor(systemStatus)}`} title={getStatusText(systemStatus)} />
+          <Zap className="h-3 w-3 text-muted-foreground" title={getStatusText(modelStatus)} />
+        </div>
+
         {/* Theme toggle */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="h-8 w-8 sm:h-8 sm:w-8 p-0 btn-touch"
+              aria-label="Toggle theme"
+            >
               <Sun className="h-4 w-4 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
               <Moon className="absolute h-4 w-4 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
               <span className="sr-only">Toggle theme</span>
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={() => setTheme("light")}>
+          <DropdownMenuContent align="end" className="w-48 sm:w-56">
+            <DropdownMenuItem onClick={() => setTheme("light")} className="btn-touch-sm">
               <Sun className="mr-2 h-4 w-4" />
               <span>Light</span>
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setTheme("dark")}>
+            <DropdownMenuItem onClick={() => setTheme("dark")} className="btn-touch-sm">
               <Moon className="mr-2 h-4 w-4" />
               <span>Dark</span>
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setTheme("system")}>
+            <DropdownMenuItem onClick={() => setTheme("system")} className="btn-touch-sm">
               <Monitor className="mr-2 h-4 w-4" />
               <span>System</span>
             </DropdownMenuItem>
@@ -175,12 +192,17 @@ export function Header({ sidebarOpen, setSidebarOpen, currentTask }) {
         {/* User menu */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="h-8 w-8 sm:h-8 sm:w-8 p-0 btn-touch"
+              aria-label="User menu"
+            >
               <User className="h-4 w-4" />
               <span className="sr-only">User menu</span>
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-56">
+          <DropdownMenuContent align="end" className="w-56 sm:w-64">
             <DropdownMenuLabel>
               <div className="flex flex-col space-y-1">
                 <p className="text-sm font-medium leading-none">Agent User</p>
@@ -190,16 +212,16 @@ export function Header({ sidebarOpen, setSidebarOpen, currentTask }) {
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>
+            <DropdownMenuItem className="btn-touch-sm">
               <Activity className="mr-2 h-4 w-4" />
               <span>Activity Log</span>
             </DropdownMenuItem>
-            <DropdownMenuItem>
+            <DropdownMenuItem className="btn-touch-sm">
               <Settings className="mr-2 h-4 w-4" />
               <span>Settings</span>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem className="text-red-600">
+            <DropdownMenuItem className="text-red-600 btn-touch-sm">
               <LogOut className="mr-2 h-4 w-4" />
               <span>Sign out</span>
             </DropdownMenuItem>

@@ -1,12 +1,53 @@
 /**
- * Accessibility utilities and components following WCAG 2.1 guidelines
- * Provides reusable patterns for better screen reader support
+ * Enhanced Accessibility utilities and components following WCAG 2.1 guidelines
+ * Provides comprehensive keyboard navigation, focus management, and screen reader support
  */
 
 import React, { useEffect, useRef, useState } from 'react'
 
 // Add JSX namespace reference
 /// <reference types="react/jsx-runtime" />
+
+// Import enhanced accessibility components
+import {
+  useKeyboardShortcuts,
+  KeyboardShortcutManager,
+  keyboardShortcutManager,
+  KeyboardShortcutsHelp,
+  DEFAULT_SHORTCUT_CONTEXTS,
+  EnhancedFocusTrap,
+  useFocusRestore,
+  useEnhancedKeyboardNavigation,
+  manageTabOrder,
+  AccessibleList,
+  Landmark,
+  LANDMARK_CONFIGS,
+  SkipLinks,
+  DEFAULT_SKIP_LINKS,
+  AccessibleLayout,
+  createCustomLandmark,
+  HeadingHierarchy,
+  PageStructureAnalyzer,
+  AccessibilityTreeViewer,
+  AccessiblePageRegions,
+  useLiveRegionManager,
+  LIVE_REGION_CONFIGS,
+  LiveRegionsContainer,
+  StatusAnnouncer,
+  AlertAnnouncer,
+  DynamicContentAnnouncer,
+  ProgressAnnouncer,
+  FormValidationAnnouncer,
+  MenuAnnouncer,
+  ModalAnnouncer,
+  KEYBOARD_TEST_SCENARIOS,
+  KeyboardTestRunner,
+  AccessibleModalExample,
+  AccessibleMenuExample,
+  KeyboardShortcutsModal,
+  KeyboardNavigationExamples,
+  AccessibilityDocumentation
+} from './components/accessibility'
 
 // Type definitions for accessibility components
 interface ScreenReaderOnlyProps {
@@ -365,7 +406,9 @@ export const useKeyboardNavigation = (items: unknown[], options: KeyboardNavigat
   }
 }
 
-export default {
+// Enhanced accessibility components
+export {
+  // Original components
   SkipToMain,
   ScreenReaderOnly,
   VisuallyHidden,
@@ -375,5 +418,128 @@ export default {
   AccessibleField,
   useAnnouncements,
   useFocusManagement,
-  useKeyboardNavigation
+  useKeyboardNavigation,
+  
+  // Keyboard shortcuts system
+  useKeyboardShortcuts,
+  KeyboardShortcutManager,
+  keyboardShortcutManager,
+  KeyboardShortcutsHelp,
+  DEFAULT_SHORTCUT_CONTEXTS,
+  
+  // Enhanced focus management
+  EnhancedFocusTrap,
+  useFocusRestore,
+  useEnhancedKeyboardNavigation,
+  manageTabOrder,
+  AccessibleList,
+  
+  // Skip links and landmarks
+  Landmark,
+  LANDMARK_CONFIGS,
+  SkipLinks,
+  DEFAULT_SKIP_LINKS,
+  AccessibleLayout,
+  createCustomLandmark,
+  HeadingHierarchy,
+  PageStructureAnalyzer,
+  AccessibilityTreeViewer,
+  AccessiblePageRegions,
+  
+  // ARIA live regions
+  useLiveRegionManager,
+  LIVE_REGION_CONFIGS,
+  LiveRegionsContainer,
+  StatusAnnouncer,
+  AlertAnnouncer,
+  DynamicContentAnnouncer,
+  ProgressAnnouncer,
+  FormValidationAnnouncer,
+  MenuAnnouncer,
+  ModalAnnouncer,
+  
+  // Keyboard navigation examples and testing
+  KEYBOARD_TEST_SCENARIOS,
+  KeyboardTestRunner,
+  AccessibleModalExample,
+  AccessibleMenuExample,
+  KeyboardShortcutsModal,
+  KeyboardNavigationExamples,
+  
+  // Documentation
+  AccessibilityDocumentation
+} from './components/accessibility'
+
+// Default export with enhanced features
+export const accessibilityFeatures = {
+  // Original features
+  SkipToMain,
+  ScreenReaderOnly,
+  VisuallyHidden,
+  FocusTrap,
+  LiveRegion,
+  AccessibleButton,
+  AccessibleField,
+  useAnnouncements,
+  useFocusManagement,
+  useKeyboardNavigation,
+  
+  // Enhanced features
+  keyboardShortcuts: {
+    useKeyboardShortcuts,
+    keyboardShortcutManager,
+    KeyboardShortcutsHelp
+  },
+  
+  focusManagement: {
+    EnhancedFocusTrap,
+    useFocusRestore,
+    useEnhancedKeyboardNavigation,
+    manageTabOrder,
+    AccessibleList
+  },
+  
+  landmarks: {
+    Landmark,
+    LANDMARK_CONFIGS,
+    SkipLinks,
+    DEFAULT_SKIP_LINKS,
+    AccessibleLayout,
+    createCustomLandmark,
+    HeadingHierarchy,
+    PageStructureAnalyzer,
+    AccessibilityTreeViewer,
+    AccessiblePageRegions
+  },
+  
+  liveRegions: {
+    useLiveRegionManager,
+    LIVE_REGION_CONFIGS,
+    LiveRegionsContainer,
+    StatusAnnouncer,
+    AlertAnnouncer,
+    DynamicContentAnnouncer,
+    ProgressAnnouncer,
+    FormValidationAnnouncer,
+    MenuAnnouncer,
+    ModalAnnouncer
+  },
+  
+  testing: {
+    KEYBOARD_TEST_SCENARIOS,
+    KeyboardTestRunner,
+    AccessibleModalExample,
+    AccessibleMenuExample,
+    KeyboardShortcutsModal,
+    KeyboardNavigationExamples
+  },
+  
+  documentation: {
+    AccessibilityDocumentation
+  }
+}
+
+export default {
+  ...accessibilityFeatures,
+  accessibilityFeatures
 }

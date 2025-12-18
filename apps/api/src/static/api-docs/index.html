@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Crazy-Gary API Documentation</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Navigation Header -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-logo">
+                <i class="fas fa-rocket"></i>
+                <span>Crazy-Gary API</span>
+            </div>
+            <div class="nav-menu" id="nav-menu">
+                <a href="#overview" class="nav-link">Overview</a>
+                <a href="#authentication" class="nav-link">Authentication</a>
+                <a href="#endpoints" class="nav-link">Endpoints</a>
+                <a href="#examples" class="nav-link">Examples</a>
+                <a href="#sdk" class="nav-link">SDKs</a>
+                <a href="/docs/api" class="nav-link interactive-docs">
+                    <i class="fas fa-play"></i> Interactive Docs
+                </a>
+            </div>
+            <div class="hamburger" id="hamburger">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="container">
+            <div class="hero-content">
+                <h1 class="hero-title">
+                    <span class="gradient-text">Crazy-Gary API</span>
+                    <br>Complete Documentation
+                </h1>
+                <p class="hero-description">
+                    Powerful AI-powered coding assistant with advanced features including Harmony integration,
+                    MCP tool orchestration, real-time monitoring, and comprehensive security.
+                </p>
+                <div class="hero-buttons">
+                    <a href="/docs/api" class="btn btn-primary">
+                        <i class="fas fa-play"></i> Try Interactive Docs
+                    </a>
+                    <a href="#quickstart" class="btn btn-secondary">
+                        <i class="fas fa-rocket"></i> Quick Start
+                    </a>
+                </div>
+                <div class="hero-stats">
+                    <div class="stat">
+                        <div class="stat-number">25+</div>
+                        <div class="stat-label">API Endpoints</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-number">99.9%</div>
+                        <div class="stat-label">Uptime</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-number">&lt;100ms</div>
+                        <div class="stat-label">Response Time</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Quick Start Section -->
+    <section id="quickstart" class="section">
+        <div class="container">
+            <h2 class="section-title">Quick Start</h2>
+            <div class="quickstart-grid">
+                <div class="quickstart-step">
+                    <div class="step-number">1</div>
+                    <h3>Get API Key</h3>
+                    <p>Register for an API key from your dashboard</p>
+                </div>
+                <div class="quickstart-step">
+                    <div class="step-number">2</div>
+                    <h3>Authenticate</h3>
+                    <p>Include your API key in the Authorization header</p>
+                </div>
+                <div class="quickstart-step">
+                    <div class="step-number">3</div>
+                    <h3>Make Requests</h3>
+                    <p>Start calling endpoints to build your application</p>
+                </div>
+            </div>
+            <div class="code-block">
+                <div class="code-header">
+                    <span>JavaScript Example</span>
+                    <button class="copy-btn" onclick="copyCode(this)">
+                        <i class="fas fa-copy"></i>
+                    </button>
+                </div>
+                <pre><code class="language-javascript">// Initialize the Crazy-Gary API client
+const crazyGary = new CrazyGaryAPI({
+  apiKey: 'your-api-key-here',
+  baseURL: 'https://api.crazy-gary.com'
+});
+
+// Generate code using AI
+const code = await crazyGary.generateCode({
+  prompt: 'Create a React component for a todo list',
+  language: 'javascript',
+  framework: 'react'
+});
+
+console.log(code);</code></pre>
+            </div>
+        </div>
+    </section>
+
+    <!-- Overview Section -->
+    <section id="overview" class="section bg-light">
+        <div class="container">
+            <h2 class="section-title">API Overview</h2>
+            <div class="overview-grid">
+                <div class="overview-card">
+                    <div class="card-icon">
+                        <i class="fas fa-brain"></i>
+                    </div>
+                    <h3>AI-Powered</h3>
+                    <p>Advanced AI capabilities powered by Harmony integration for intelligent code generation and analysis.</p>
+                </div>
+                <div class="overview-card">
+                    <div class="card-icon">
+                        <i class="fas fa-puzzle-piece"></i>
+                    </div>
+                    <h3>MCP Tools</h3>
+                    <p>Model Context Protocol (MCP) integration for extended functionality and tool orchestration.</p>
+                </div>
+                <div class="overview-card">
+                    <div class="card-icon">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                    <h3>Real-time Monitoring</h3>
+                    <p>Comprehensive monitoring and observability features with WebSocket support for real-time updates.</p>
+                </div>
+                <div class="overview-card">
+                    <div class="card-icon">
+                        <i class="fas fa-shield-alt"></i>
+                    </div>
+                    <h3>Enterprise Security</h3>
+                    <p>Advanced security features including rate limiting, input sanitization, and comprehensive authentication.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Authentication Section -->
+    <section id="authentication" class="section">
+        <div class="container">
+            <h2 class="section-title">Authentication</h2>
+            <div class="auth-content">
+                <div class="auth-description">
+                    <p>The Crazy-Gary API uses JWT-based authentication. Include your API key in the Authorization header of every request.</p>
+                </div>
+                <div class="code-block">
+                    <div class="code-header">
+                        <span>Authorization Header</span>
+                        <button class="copy-btn" onclick="copyCode(this)">
+                            <i class="fas fa-copy"></i>
+                        </button>
+                    </div>
+                    <pre><code class="language-bash">Authorization: Bearer your-jwt-token-here
+Content-Type: application/json</code></pre>
+                </div>
+                <div class="auth-methods">
+                    <div class="auth-method">
+                        <h4><i class="fas fa-key"></i> JWT Tokens</h4>
+                        <p>Use JWT tokens obtained from the authentication endpoint</p>
+                    </div>
+                    <div class="auth-method">
+                        <h4><i class="fas fa-api-key"></i> API Keys</h4>
+                        <p>Direct API key authentication for server-to-server communication</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Endpoints Section -->
+    <section id="endpoints" class="section bg-light">
+        <div class="container">
+            <h2 class="section-title">API Endpoints</h2>
+            <div class="endpoints-grid">
+                <div class="endpoint-category">
+                    <h3><i class="fas fa-user"></i> Authentication</h3>
+                    <div class="endpoint-list">
+                        <div class="endpoint-item">
+                            <span class="method post">POST</span>
+                            <span class="path">/api/auth/login</span>
+                            <span class="description">User authentication</span>
+                        </div>
+                        <div class="endpoint-item">
+                            <span class="method post">POST</span>
+                            <span class="path">/api/auth/register</span>
+                            <span class="description">User registration</span>
+                        </div>
+                        <div class="endpoint-item">
+                            <span class="method post">POST</span>
+                            <span class="path">/api/auth/refresh</span>
+                            <span class="description">Token refresh</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="endpoint-category">
+                    <h3><i class="fas fa-code"></i> Code Generation</h3>
+                    <div class="endpoint-list">
+                        <div class="endpoint-item">
+                            <span class="method post">POST</span>
+                            <span class="path">/api/generate</span>
+                            <span class="description">AI code generation</span>
+                        </div>
+                        <div class="endpoint-item">
+                            <span class="method post">POST</span>
+                            <span class="path">/api/analyze</span>
+                            <span class="description">Code analysis</span>
+                        </div>
+                        <div class="endpoint-item">
+                            <span class="method post">POST</span>
+                            <span class="path">/api/optimize</span>
+                            <span class="description">Code optimization</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="endpoint-category">
+                    <h3><i class="fas fa-tools"></i> MCP Tools</h3>
+                    <div class="endpoint-list">
+                        <div class="endpoint-item">
+                            <span class="method get">GET</span>
+                            <span class="path">/api/tools</span>
+                            <span class="description">List available tools</span>
+                        </div>
+                        <div class="endpoint-item">
+                            <span class="method post">POST</span>
+                            <span class="path">/api/tools/execute</span>
+                            <span class="description">Execute tool</span>
+                        </div>
+                        <div class="endpoint-item">
+                            <span class="method get">GET</span>
+                            <span class="path">/api/tools/status</span>
+                            <span class="description">Tool status</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="endpoint-category">
+                    <h3><i class="fas fa-chart-bar"></i> Monitoring</h3>
+                    <div class="endpoint-list">
+                        <div class="endpoint-item">
+                            <span class="method get">GET</span>
+                            <span class="path">/api/monitoring/metrics</span>
+                            <span class="description">System metrics</span>
+                        </div>
+                        <div class="endpoint-item">
+                            <span class="method get">GET</span>
+                            <span class="path">/api/monitoring/logs</span>
+                            <span class="description">System logs</span>
+                        </div>
+                        <div class="endpoint-item">
+                            <span class="method get">GET</span>
+                            <span class="path">/api/monitoring/health</span>
+                            <span class="description">Health status</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="endpoints-cta">
+                <a href="/docs/api" class="btn btn-primary">
+                    <i class="fas fa-book"></i> View Complete API Reference
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- SDK Section -->
+    <section id="sdk" class="section">
+        <div class="container">
+            <h2 class="section-title">SDKs & Libraries</h2>
+            <div class="sdk-grid">
+                <div class="sdk-card">
+                    <div class="sdk-icon">
+                        <i class="fab fa-js-square"></i>
+                    </div>
+                    <h3>JavaScript/Node.js</h3>
+                    <p>Official JavaScript SDK with full TypeScript support</p>
+                    <code>npm install @crazy-gary/js-sdk</code>
+                    <a href="#" class="btn btn-outline">View Documentation</a>
+                </div>
+                <div class="sdk-card">
+                    <div class="sdk-icon">
+                        <i class="fab fa-python"></i>
+                    </div>
+                    <h3>Python</h3>
+                    <p>Python SDK with async support and comprehensive examples</p>
+                    <code>pip install crazy-gary-python</code>
+                    <a href="#" class="btn btn-outline">View Documentation</a>
+                </div>
+                <div class="sdk-card">
+                    <div class="sdk-icon">
+                        <i class="fab fa-php"></i>
+                    </div>
+                    <h3>PHP</h3>
+                    <p>PHP SDK with Laravel and Symfony integrations</p>
+                    <code>composer require crazy-gary/php-sdk</code>
+                    <a href="#" class="btn btn-outline">View Documentation</a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h4>Documentation</h4>
+                    <ul>
+                        <li><a href="/docs/api">Interactive API Docs</a></li>
+                        <li><a href="/openapi.json">OpenAPI Specification</a></li>
+                        <li><a href="/docs/api/usage-examples.md">Usage Examples</a></li>
+                        <li><a href="/docs/api/testing-guidelines.md">Testing Guide</a></li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h4>Resources</h4>
+                    <ul>
+                        <li><a href="/docs/api/crazy-gary-api.postman_collection.json">Postman Collection</a></li>
+                        <li><a href="/docs/api/error-handling.md">Error Handling</a></li>
+                        <li><a href="/docs/api/security.md">Security Guide</a></li>
+                        <li><a href="/docs/api/api-versioning.md">API Versioning</a></li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h4>Support</h4>
+                    <ul>
+                        <li><a href="#">GitHub Issues</a></li>
+                        <li><a href="#">Discord Community</a></li>
+                        <li><a href="#">API Status</a></li>
+                        <li><a href="#">Contact Support</a></li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h4>Company</h4>
+                    <ul>
+                        <li><a href="#">About</a></li>
+                        <li><a href="#">Blog</a></li>
+                        <li><a href="#">Careers</a></li>
+                        <li><a href="#">Privacy Policy</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2024 Crazy-Gary API. All rights reserved.</p>
+                <div class="footer-links">
+                    <a href="#">Terms of Service</a>
+                    <a href="#">Privacy Policy</a>
+                    <a href="#">Security</a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+</html>

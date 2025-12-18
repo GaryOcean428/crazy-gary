@@ -1,0 +1,46 @@
+alert_webhook_url: ''
+allowed_content_types:
+- application/json
+- application/x-www-form-urlencoded
+- multipart/form-data
+- text/plain
+blocked_ips: []
+cors_allowed_headers:
+- Content-Type
+- Authorization
+- X-Requested-With
+- X-API-Key
+- X-CSRF-Token
+- Accept
+- Accept-Language
+cors_allowed_methods:
+- GET
+- POST
+- PUT
+- DELETE
+- PATCH
+- OPTIONS
+cors_allowed_origins:
+- '*'
+enable_audit_logging: true
+enable_csp: true
+enable_hsts: true
+enable_input_sanitization: true
+enable_performance_monitoring: true
+enable_security_logging: true
+enable_threat_detection: true
+enable_vulnerability_scanning: true
+enable_xss_protection: true
+jwt_expiration_hours: 24
+jwt_secret_key: ''
+lockout_duration_minutes: 15
+log_retention_days: 30
+max_json_depth: 10
+max_login_attempts: 5
+max_request_size: 16777216
+password_min_length: 8
+password_require_special: true
+rate_limit_burst: 100
+rate_limit_rps: 10
+rate_limit_window: 60
+whitelist_ips: []
