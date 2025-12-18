@@ -18,7 +18,7 @@ export const useComponentLoading = (componentId: string) => {
     setTimeout(() => clearComponentLoading(componentId), 100)
   }, [componentId, setComponentLoading, clearComponentLoading])
 
-  const withLoading = useCallback(async <T>(promise: Promise<T>): Promise<T> => {
+  const withLoading = useCallback(async <T extends unknown>(promise: Promise<T>): Promise<T> => {
     startLoading()
     try {
       const result = await promise
@@ -53,7 +53,7 @@ export const useActionLoading = (actionId: string) => {
     setTimeout(() => clearActionLoading(actionId), 100)
   }, [actionId, setActionLoading, clearActionLoading])
 
-  const withLoading = useCallback(async <T>(promise: Promise<T>): Promise<T> => {
+  const withLoading = useCallback(async <T extends unknown>(promise: Promise<T>): Promise<T> => {
     startLoading()
     try {
       return await promise
@@ -97,7 +97,7 @@ export const useProgressiveLoading = (id: string) => {
     }, 2000)
   }, [updateProgress])
 
-  const withProgressiveLoading = useCallback(async <T>(
+  const withProgressiveLoading = useCallback(async <T extends unknown>(
     promise: Promise<T>,
     progressCallback?: (progress: number) => void
   ): Promise<T> => {
@@ -141,7 +141,7 @@ export const useAsyncOperation = () => {
   const [error, setError] = useState<Error | null>(null)
   const [data, setData] = useState<any>(null)
 
-  const execute = useCallback(async <T>(
+  const execute = useCallback(async <T extends unknown>(
     asyncFunction: () => Promise<T>,
     options?: {
       onStart?: () => void
@@ -286,7 +286,7 @@ export const useTimeoutLoading = (timeout: number = 10000) => {
     }
   }, [])
 
-  const withTimeout = useCallback(async <T>(promise: Promise<T>): Promise<T> => {
+  const withTimeout = useCallback(async <T extends unknown>(promise: Promise<T>): Promise<T> => {
     startLoading()
     try {
       const result = await promise

@@ -278,7 +278,7 @@ export const useFocusContext = (): FocusContextValue => {
 }
 
 // Enhanced keyboard navigation for complex widgets
-export const useEnhancedKeyboardNavigation = <T>(
+export const useEnhancedKeyboardNavigation = <T extends unknown>(
   items: T[],
   options: {
     orientation?: 'horizontal' | 'vertical'

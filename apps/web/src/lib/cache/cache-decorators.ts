@@ -128,10 +128,10 @@ export function cacheWithInvalidation(options: CacheDecoratorOptions & {
       target[`invalidate${propertyKey.charAt(0).toUpperCase() + propertyKey.slice(1)}Cache`] = 
         async (...args: any[]) => {
           const cacheKey = options.keyGenerator 
-           (...args)
+            ? options.keyGenerator(...args)
             : `${cacheKeyPrefix}:${JSON.stringify(args)}`;
           await cache.delete(cacheKey);
-        ? options.keyGenerator };
+        };
     }
 
     return descriptor;

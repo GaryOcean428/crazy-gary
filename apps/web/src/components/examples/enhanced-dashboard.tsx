@@ -81,7 +81,8 @@ const EnhancedDashboard = HOCPatterns.withLoading(
               <Badge variant="secondary" className="bg-white/20 text-white">
                 +8%
               </Badge>
-            >
+            }
+          >
             <RenderPropPatterns.RenderProps
               data={dashboardData.activeUsers}
               loading={false}
@@ -106,7 +107,8 @@ const EnhancedDashboard = HOCPatterns.withLoading(
               <Badge variant="secondary" className="bg-white/20 text-white">
                 +18%
               </Badge>
-            >
+            }
+          >
             <RenderPropPatterns.RenderProps
               data={dashboardData.revenue}
               loading={false}
