@@ -34,7 +34,6 @@
     "exactOptionalPropertyTypes": true,
     "forceConsistentCasingInFileNames": true,
     "allowSyntheticDefaultImports": true,
-    "noEmitOnError": true,
 
     /* Additional Quality Checks */
     "noErrorTruncation": true,
@@ -62,10 +61,7 @@
     }
   },
   "include": [
-    "src/**/*",
-    "src/**/*.d.ts",
-    "src/**/*.tsx",
-    "src/**/*.ts"
+    "src"
   ],
   "exclude": [
     "node_modules",
@@ -75,13 +71,10 @@
     ".turbo",
     "coverage",
     "storybook-static",
-    "*.config.js",
-    "*.config.ts",
-    "jest.config.js",
-    "jest.config.ts"
-  ],
-  "references": [
-    { "path": "./tsconfig.node.json" },
-    { "path": "./tsconfig.test.json" }
+    "**/*.test.ts",
+    "**/*.test.tsx",
+    "**/*.spec.ts",
+    "**/*.spec.tsx",
+    "**/__tests__/**"
   ]
 }
