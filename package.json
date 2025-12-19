@@ -45,17 +45,19 @@
     "quality:summary": "bash scripts/quality-gates-summary.sh"
   },
   "devDependencies": {
-    "typescript": "^5.5.0",
-    "husky": "^8.0.3",
-    "lint-staged": "^13.3.0",
     "@commitlint/cli": "^17.8.0",
     "@commitlint/config-conventional": "^17.8.0",
-    "jscpd": "^3.5.10",
-    "eslint-plugin-simple-import-sort": "^9.0.0",
-    "eslint-plugin-security": "^1.7.1",
+    "@storybook/react": "^10.1.10",
+    "@storybook/test": "8.6.14",
+    "@types/jest-axe": "^3.5.9",
+    "chalk": "^4.1.2",
     "cspell": "^6.21.0",
-    "bc": "^1.0.0",
+    "eslint-plugin-security": "^1.7.1",
+    "eslint-plugin-simple-import-sort": "^9.0.0",
+    "husky": "^8.0.3",
+    "jscpd": "^3.5.10",
+    "lint-staged": "^13.3.0",
     "progress": "^2.0.3",
-    "chalk": "^4.1.2"
+    "typescript": "^5.5.0"
   }
 }
