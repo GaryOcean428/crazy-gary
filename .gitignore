@@ -163,7 +163,7 @@ instance/
 .ipynb_checkpoints
 
 # pyenv
-.python-version
+# .python-version - Uncommented because Railway/mise needs this file
 
 # Poetry
 poetry.lock
